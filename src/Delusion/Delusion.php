@@ -8,6 +8,7 @@
 namespace Delusion;
 
 use Composer\Autoload\ClassLoader;
+use TokenReflection\Broker;
 
 /**
  * Class Delusion
@@ -17,26 +18,40 @@ use Composer\Autoload\ClassLoader;
  */
 class Delusion
 {
+    protected static $instance;
+    /**
+     * @var Broker
+     */
+    protected $broker;
+    /**
+     * @var bool
+     */
+    protected $inject = false;
     /**
      * @var ClassLoader
      */
-    private static $composer;
+    private $composer;
 
-    public function injection()
+    /**
+     * Init Delusion.
+     *
+     * @throws \RuntimeException
+     */
+    protected function __construct()
     {
-        if (!empty(self::$composer)) {
-            throw new \RuntimeException('Delusion is already injected.');
-        }
         $autoloaders = spl_autoload_functions();
-        self::$composer = $this->findComposer($autoloaders);
+        $this->composer = $this->findComposer($autoloaders);
         spl_autoload_register([$this, 'loadClass'], true, true);
+        $this->broker = new Broker(new Broker\Backend\Memory());
     }
 
-    public function loadClass($class)
-    {
-
-    }
-
+    /**
+     * Find composer ClassLoader and unregister its autoload.
+     *
+     * @param array $loaders
+     *
+     * @return ClassLoader|null
+     */
     private function findComposer(array $loaders)
     {
         foreach ($loaders as $loader) {
@@ -48,5 +63,43 @@ class Delusion
         }
 
         return null;
+    }
+
+    /**
+     * Get instance of Delusion.
+     *
+     * @return Delusion
+     */
+    public static function injection()
+    {
+        if (empty(self::$instance)) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
+    }
+
+    public function getMirage($class)
+    {
+        if (!$this->broker->hasClass($class)) {
+            $file = $this->composer->findFile($class);
+            $this->broker->processFile($file);
+        }
+        $c = $this->broker->getClass($class);
+        var_dump($c->getName(), class_exists($class, false));
+    }
+
+    /**
+     * Load class by its name.
+     *
+     * @param string $class
+     */
+    private function loadClass($class)
+    {
+        if ($this->inject) {
+
+        } else {
+            $this->composer->loadClass($class);
+        }
     }
 }
