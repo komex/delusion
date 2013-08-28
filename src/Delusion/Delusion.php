@@ -9,6 +9,7 @@ namespace Delusion;
 
 use Composer\Autoload\ClassLoader;
 use TokenReflection\Broker;
+use TokenReflection\ReflectionClass;
 use TokenReflection\ReflectionMethod;
 
 /**
@@ -138,29 +139,59 @@ class Delusion extends \php_user_filter
     private function spoof()
     {
         $class = self::$instance->broker->getClass(self::$instance->current_class);
+        $code = $class->getFileReflection()->getSource();
         if ($class->isInterface()) {
-            return $class->getSource();
-        } elseif ($class->isTrait()) {
-            // @todo: Traits support.
-            return $class->getSource();
+            return $code;
         } else {
-            $code = $class->getFileReflection()->getSource();
-            $regexp = sprintf(
-                '/\bclass\s+%s(?:\s+(?:implements|extends)\s+[\w\\\\]+)*/im',
-                quotemeta(self::$instance->current_class)
-            );
-            $corrected = 'class ' . self::$instance->current_class;
-            if ($class->getParentClassName() != '') {
-                $corrected .= ' extends ' . $class->getParentClassName();
-            }
-            $interfaces = $class->getOwnInterfaceNames();
-            array_push($interfaces, '\\Delusion\\PuppetThreadInterface');
-            $interfaces = join(', ', array_unique($interfaces));
-            $corrected .= ' implements ' . $interfaces;
-            $code = preg_replace($regexp, $corrected, $code, 1);
             /** @var ReflectionMethod[] $methods */
             $methods = $class->getOwnMethods();
-            $injected_code = <<<END
+            if (!$class->isTrait()) {
+                $code = $this->addDelusionInterface($code, $class);
+                $code = $this->addDelusionMethods($code, $methods[0]);
+            }
+            $code = $this->replaceMethods($code, $methods);
+
+            return $code;
+        }
+    }
+
+    /**
+     * Modified class must implements Delusion interface.
+     *
+     * @param string $code
+     * @param ReflectionClass $class
+     *
+     * @return string
+     */
+    private function addDelusionInterface($code, ReflectionClass $class)
+    {
+        $regexp = sprintf(
+            '/\bclass\s+%s(?:\s+(?:implements|extends)\s+[\w\\\\]+)*/im',
+            quotemeta(self::$instance->current_class)
+        );
+        $corrected = 'class ' . self::$instance->current_class;
+        if ($class->getParentClassName() != '') {
+            $corrected .= ' extends ' . $class->getParentClassName();
+        }
+        $interfaces = $class->getOwnInterfaceNames();
+        array_push($interfaces, '\\Delusion\\PuppetThreadInterface');
+        $interfaces = join(', ', array_unique($interfaces));
+        $corrected .= ' implements ' . $interfaces;
+
+        return preg_replace($regexp, $corrected, $code, 1);
+    }
+
+    /**
+     * Add methods for working with Delusion.
+     *
+     * @param string $code
+     * @param ReflectionMethod $method First method definition
+     *
+     * @return string
+     */
+    private function addDelusionMethods($code, ReflectionMethod $method)
+    {
+        $injected_code = <<<END
     protected \$delusion_invokes = [];
     protected \$delusion_returns = [];
 
@@ -205,22 +236,33 @@ class Delusion extends \php_user_filter
     }
 
 END;
-            $position = strpos($code, $methods[0]->getSource());
-            $code = substr($code, 0, $position) . $injected_code . substr($code, $position);
+        $position = strpos($code, $method->getSource());
 
-            foreach ($methods as $method) {
-                if ($method->isConstructor() || $method->isDestructor()) {
-                    $transformed_method = $this->methodInjector($method, false);
-                } elseif ($method->isAbstract()) {
-                    $transformed_method = $method->getSource();
-                } else {
-                    $transformed_method = $this->methodInjector($method);
-                }
-                $code = str_replace($method->getSource(), $transformed_method, $code);
+        return substr($code, 0, $position) . $injected_code . substr($code, $position);
+    }
+
+    /**
+     * Replace methods in file to modified.
+     *
+     * @param string $code
+     * @param ReflectionMethod[] $methods
+     *
+     * @return string
+     */
+    private function replaceMethods($code, array $methods)
+    {
+        foreach ($methods as $method) {
+            if ($method->isConstructor() || $method->isDestructor()) {
+                $transformed_method = $this->methodInjector($method, false);
+            } elseif ($method->isAbstract()) {
+                $transformed_method = $method->getSource();
+            } else {
+                $transformed_method = $this->methodInjector($method);
             }
-
-            return $code;
+            $code = str_replace($method->getSource(), $transformed_method, $code);
         }
+
+        return $code;
     }
 
     /**
