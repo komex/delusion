@@ -83,9 +83,12 @@ class Delusion extends \php_user_filter
     {
         /** @var resource|object $bucket */
         while ($bucket = stream_bucket_make_writeable($in)) {
-            $bucket->data = $this->spoof();
-            $consumed += strlen($bucket->data);
-            stream_bucket_append($out, $bucket);
+            if (self::$instance->current_class !== null) {
+                $bucket->data = $this->spoof();
+                self::$instance->current_class = null;
+                $consumed += strlen($bucket->data);
+                stream_bucket_append($out, $bucket);
+            }
         }
 
         return PSFS_PASS_ON;
@@ -145,11 +148,13 @@ class Delusion extends \php_user_filter
         } else {
             /** @var ReflectionMethod[] $methods */
             $methods = $class->getOwnMethods();
-            if (!$class->isTrait()) {
-                $code = $this->addDelusionInterface($code, $class);
-                $code = $this->addDelusionMethods($code, $methods[0]);
+            if (!empty($methods)) {
+                if (!$class->isTrait()) {
+                    $code = $this->addDelusionInterface($code, $class);
+                    $code = $this->addDelusionMethods($code, $methods[0]);
+                }
+                $code = $this->replaceMethods($code, $methods);
             }
-            $code = $this->replaceMethods($code, $methods);
 
             return $code;
         }
@@ -166,7 +171,7 @@ class Delusion extends \php_user_filter
     private function addDelusionInterface($code, ReflectionClass $class)
     {
         $regexp = sprintf(
-            '/\bclass\s+%s(?:\s+(?:implements|extends)\s+[\w\\\\]+)*/im',
+            '/\bclass\s+%s(?:\s+(?:implements|extends)\s+[\w_\\,\s]+)?\s*{/im',
             quotemeta(self::$instance->current_class)
         );
         $corrected = 'class ' . self::$instance->current_class;
@@ -176,7 +181,7 @@ class Delusion extends \php_user_filter
         $interfaces = $class->getOwnInterfaceNames();
         array_push($interfaces, '\\Delusion\\PuppetThreadInterface');
         $interfaces = join(', ', array_unique($interfaces));
-        $corrected .= ' implements ' . $interfaces;
+        $corrected .= ' implements ' . $interfaces . ' {';
 
         return preg_replace($regexp, $corrected, $code, 1);
     }
@@ -297,12 +302,20 @@ END;
         \$delusion = \Delusion\Delusion::injection();
         \$class = \$delusion->getClassBehavior(__CLASS__);
         \$class->registerInvoke(__FUNCTION__, func_get_args());
-        if (\$class->delusionHasCustomBehavior(__FUNCTION__) !== null) {
+        if (\$class->delusionHasCustomBehavior(__FUNCTION__)) {
             $return_code
         } else {
 END;
         } else {
-            $return_code = $return ? 'return $this->delusion_returns[__FUNCTION__];' : '';
+            $return_code = <<<END
+
+            \$return = \$this->delusion_returns[__FUNCTION__];
+            if (is_callable(\$return)) {
+                return \$return(func_get_args());
+            } else {
+                return \$return;
+            }
+END;
             $code = <<<END
 
         if (empty(\$this->delusion_invokes[__FUNCTION__])) {
@@ -332,6 +345,9 @@ END;
         if (!in_array($prefix, ['TokenReflection', 'Delusion'])) {
             if (!$this->broker->hasClass($class)) {
                 $file = $this->composer->findFile($class);
+                if (empty($file)) {
+                    return;
+                }
                 $this->broker->processFile($file);
                 $this->current_class = $class;
                 include('php://filter/read=delusion.loader/resource=' . $file);
