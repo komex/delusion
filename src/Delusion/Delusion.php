@@ -83,9 +83,12 @@ class Delusion extends \php_user_filter
     {
         /** @var resource|object $bucket */
         while ($bucket = stream_bucket_make_writeable($in)) {
-            $bucket->data = $this->spoof();
-            $consumed += strlen($bucket->data);
-            stream_bucket_append($out, $bucket);
+            if (self::$instance->current_class !== null) {
+                $bucket->data = $this->spoof();
+                self::$instance->current_class = null;
+                $consumed += strlen($bucket->data);
+                stream_bucket_append($out, $bucket);
+            }
         }
 
         return PSFS_PASS_ON;
