@@ -307,7 +307,15 @@ END;
         } else {
 END;
         } else {
-            $return_code = $return ? 'return $this->delusion_returns[__FUNCTION__];' : '';
+            $return_code = <<<END
+
+            \$return = \$this->delusion_returns[__FUNCTION__];
+            if (is_callable(\$return)) {
+                return \$return(func_get_args());
+            } else {
+                return \$return;
+            }
+END;
             $code = <<<END
 
         if (empty(\$this->delusion_invokes[__FUNCTION__])) {
