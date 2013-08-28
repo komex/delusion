@@ -148,11 +148,13 @@ class Delusion extends \php_user_filter
         } else {
             /** @var ReflectionMethod[] $methods */
             $methods = $class->getOwnMethods();
-            if (!$class->isTrait()) {
-                $code = $this->addDelusionInterface($code, $class);
-                $code = $this->addDelusionMethods($code, $methods[0]);
+            if (!empty($methods)) {
+                if (!$class->isTrait()) {
+                    $code = $this->addDelusionInterface($code, $class);
+                    $code = $this->addDelusionMethods($code, $methods[0]);
+                }
+                $code = $this->replaceMethods($code, $methods);
             }
-            $code = $this->replaceMethods($code, $methods);
 
             return $code;
         }
@@ -300,7 +302,7 @@ END;
         \$delusion = \Delusion\Delusion::injection();
         \$class = \$delusion->getClassBehavior(__CLASS__);
         \$class->registerInvoke(__FUNCTION__, func_get_args());
-        if (\$class->delusionHasCustomBehavior(__FUNCTION__) !== null) {
+        if (\$class->delusionHasCustomBehavior(__FUNCTION__)) {
             $return_code
         } else {
 END;
@@ -335,6 +337,9 @@ END;
         if (!in_array($prefix, ['TokenReflection', 'Delusion'])) {
             if (!$this->broker->hasClass($class)) {
                 $file = $this->composer->findFile($class);
+                if (empty($file)) {
+                    return;
+                }
                 $this->broker->processFile($file);
                 $this->current_class = $class;
                 include('php://filter/read=delusion.loader/resource=' . $file);
