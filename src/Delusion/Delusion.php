@@ -166,7 +166,7 @@ class Delusion extends \php_user_filter
     private function addDelusionInterface($code, ReflectionClass $class)
     {
         $regexp = sprintf(
-            '/\bclass\s+%s(?:\s+(?:implements|extends)\s+[\w\\\\]+)*/im',
+            '/\bclass\s+%s(?:\s+(?:implements|extends)\s+[\w_\\,\s]+)?\s*{/im',
             quotemeta(self::$instance->current_class)
         );
         $corrected = 'class ' . self::$instance->current_class;
@@ -176,7 +176,7 @@ class Delusion extends \php_user_filter
         $interfaces = $class->getOwnInterfaceNames();
         array_push($interfaces, '\\Delusion\\PuppetThreadInterface');
         $interfaces = join(', ', array_unique($interfaces));
-        $corrected .= ' implements ' . $interfaces;
+        $corrected .= ' implements ' . $interfaces . ' {';
 
         return preg_replace($regexp, $corrected, $code, 1);
     }
