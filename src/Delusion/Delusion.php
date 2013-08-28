@@ -10,9 +10,6 @@ namespace Delusion;
 use Composer\Autoload\ClassLoader;
 use TokenReflection\Broker;
 use TokenReflection\ReflectionMethod;
-use TokenReflection\ReflectionConstant;
-use TokenReflection\ReflectionParameter;
-use TokenReflection\ReflectionProperty;
 
 /**
  * Class Delusion
@@ -58,26 +55,6 @@ class Delusion extends \php_user_filter
     }
 
     /**
-     * Find composer ClassLoader and unregister its autoload.
-     *
-     * @param array $loaders
-     *
-     * @return ClassLoader|null
-     */
-    private function findComposer(array $loaders)
-    {
-        foreach ($loaders as $loader) {
-            if ($loader[0] instanceof ClassLoader) {
-                spl_autoload_unregister($loader);
-
-                return $loader[0];
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Starts perform magic.
      *
      * @return Delusion
@@ -103,6 +80,7 @@ class Delusion extends \php_user_filter
      */
     public function filter($in, $out, &$consumed, $closing)
     {
+        /** @var resource|object $bucket */
         while ($bucket = stream_bucket_make_writeable($in)) {
             $bucket->data = $this->spoof();
             $consumed += strlen($bucket->data);
@@ -113,60 +91,78 @@ class Delusion extends \php_user_filter
     }
 
     /**
+     * Get behavior of static class.
+     *
+     * @param string $class
+     *
+     * @return PuppetThreadInterface
+     * @throws \InvalidArgumentException If class does not loaded.
+     */
+    public function getClassBehavior($class)
+    {
+        if ($class[0] == '\\') {
+            $class = substr($class, 1);
+        }
+        if (empty($this->static_classes[$class])) {
+            $this->static_classes[$class] = new ClassBehavior($this->broker->getClass($class));
+        }
+
+        return $this->static_classes[$class];
+    }
+
+    /**
+     * Find composer ClassLoader and unregister its autoload.
+     *
+     * @param array $loaders
+     *
+     * @return ClassLoader|null
+     */
+    private function findComposer(array $loaders)
+    {
+        foreach ($loaders as $loader) {
+            if ($loader[0] instanceof ClassLoader) {
+                spl_autoload_unregister($loader);
+
+                return $loader[0];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Transform original class for getting full control.
      *
      * @return string
      */
     private function spoof()
     {
-        $instance = self::$instance;
-        $class = $instance->broker->getClass($instance->current_class);
+        $class = self::$instance->broker->getClass(self::$instance->current_class);
         if ($class->isInterface()) {
             return $class->getSource();
-        }
-        $str = '<?php' . PHP_EOL;
-        if ($class->getNamespaceName() != '') {
-            $str .= sprintf('namespace %s;' . PHP_EOL, $class->getNamespaceName());
-        }
-        if ($class->getDocComment() !== false) {
-            $str .= $class->getDocComment() . PHP_EOL;
-        }
-        if ($class->isAbstract()) {
-            $str .= 'abstract ';
-        }
-        $str .= 'class ' . $class->getShortName();
-        if ($class->getParentClassName() !== null) {
-            $str .= ' extends \\' . $class->getParentClassName();
-        }
-        $implements = join(', \\', $class->getInterfaceNames() + ['Delusion\\PuppetThreadInterface']);
-        $str .= ' implements \\' . $implements;
-        $str .= ' {' . PHP_EOL;
-
-        /** @var ReflectionConstant $constant */
-        foreach ($class->getConstantReflections() as $constant) {
-            $str .= '    ';
-            $str .= $constant->getDocComment() ? $constant->getDocComment() . PHP_EOL : '';
-            $str .= $constant->getSource() . PHP_EOL;
-        }
-        $str .= '    protected $delusion_invokes = [];' . PHP_EOL;
-        $str .= '    protected $delusion_returns = [];' . PHP_EOL;
-        /** @var ReflectionProperty $property */
-        foreach ($class->getProperties() as $property) {
-            $str .= '    ';
-            $str .= $property->getDocComment() ? $property->getDocComment() . PHP_EOL : '';
-            $str .= $property->getSource() . PHP_EOL;
-        }
-        /** @var ReflectionMethod $method */
-        foreach ($class->getOwnMethods() as $method) {
-            $str .= '    ';
-            if ($method->isAbstract() || $method->isConstructor() || $method->isDestructor()) {
-                $str .= $method->getSource();
-            } else {
-                $str .= $this->methodInjector($method);
+        } elseif ($class->isTrait()) {
+            // @todo: Traits support.
+            return $class->getSource();
+        } else {
+            $code = $class->getFileReflection()->getSource();
+            $regexp = sprintf(
+                '/\bclass\s+%s(?:\s+(?:implements|extends)\s+[\w\\\\]+)*/im',
+                quotemeta(self::$instance->current_class)
+            );
+            $corrected = 'class ' . self::$instance->current_class;
+            if ($class->getParentClassName() != '') {
+                $corrected .= ' extends ' . $class->getParentClassName();
             }
-        }
-
-        $str .= <<<END
+            $interfaces = $class->getOwnInterfaceNames();
+            array_push($interfaces, '\\Delusion\\PuppetThreadInterface');
+            $interfaces = join(', ', array_unique($interfaces));
+            $corrected .= ' implements ' . $interfaces;
+            $code = preg_replace($regexp, $corrected, $code, 1);
+            /** @var ReflectionMethod[] $methods */
+            $methods = $class->getOwnMethods();
+            $injected_code = <<<END
+    protected \$delusion_invokes = [];
+    protected \$delusion_returns = [];
 
     public function delusionGetInvokesCount(\$method)
     {
@@ -175,12 +171,7 @@ class Delusion extends \php_user_filter
 
     public function delusionGetInvokesArguments(\$method)
     {
-        if (!array_key_exists(\$method, \$this->delusionInvokes)) {
-            throw new \InvalidArgumentException(
-                sprintf('Delusion method "%s" not found in class %s', \$method, __CLASS__)
-            );
-        }
-        return \$this->delusionInvokes[\$method];
+        return array_key_exists(\$method, \$this->delusionInvokes) ? \$this->delusionInvokes[\$method] : [];
     }
 
     public function delusionSetBehavior(\$method, \$returns)
@@ -199,8 +190,26 @@ class Delusion extends \php_user_filter
     }
 
 END;
+            $position = strpos($code, $methods[0]->getSource());
+            $code = substr($code, 0, $position) . $injected_code . substr($code, $position);
 
-        return $str . '}' . PHP_EOL;
+            foreach ($methods as $method) {
+                if ($method->isConstructor()) {
+                    // @todo Constructor control
+                    $transformed_method = $method->getSource();
+                } elseif ($method->isDestructor()) {
+                    // @todo Destructor control
+                    $transformed_method = $method->getSource();
+                } elseif ($method->isAbstract()) {
+                    $transformed_method = $method->getSource();
+                } else {
+                    $transformed_method = $this->methodInjector($method);
+                }
+                $code = str_replace($method->getSource(), $transformed_method, $code);
+            }
+
+            return $code;
+        }
     }
 
     /**
@@ -246,26 +255,6 @@ END;
         }
 
         return substr($source, 0, $start_position) . $code . $original_code . '}' . substr($source, $end_position);
-    }
-
-    /**
-     * Get behavior of static class.
-     *
-     * @param string $class
-     *
-     * @return PuppetThreadInterface
-     * @throws \InvalidArgumentException If class does not loaded.
-     */
-    public function getClassBehavior($class)
-    {
-        if ($class[0] == '\\') {
-            $class = substr($class, 1);
-        }
-        if (empty($this->static_classes[$class])) {
-            $this->static_classes[$class] = new ClassBehavior($this->broker->getClass($class));
-        }
-
-        return $this->static_classes[$class];
     }
 
     /**
