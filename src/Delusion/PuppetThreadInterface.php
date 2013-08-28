@@ -49,6 +49,11 @@ interface PuppetThreadInterface
     public function delusionResetBehavior($method);
 
     /**
+     * Reset class to original state.
+     */
+    public function delusionResetAllBehavior();
+
+    /**
      * Check if method has custom behavior.
      *
      * @param string $method
@@ -56,4 +61,16 @@ interface PuppetThreadInterface
      * @return bool
      */
     public function delusionHasCustomBehavior($method);
+
+    /**
+     * Clear invokes stack for method.
+     *
+     * @param string $method
+     */
+    public function delusionResetInvokesCounter($method);
+
+    /**
+     * Clear all invokes stack.
+     */
+    public function delusionResetAllInvokesCounter();
 }

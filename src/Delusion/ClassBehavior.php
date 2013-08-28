@@ -7,8 +7,6 @@
 
 namespace Delusion;
 
-use TokenReflection\ReflectionClass;
-
 /**
  * Class ClassBehavior
  *
@@ -25,6 +23,32 @@ class ClassBehavior implements PuppetThreadInterface
      * @var array[]
      */
     protected $returns = [];
+
+    /**
+     * Reset class to original state.
+     */
+    public function delusionResetAllBehavior()
+    {
+        $this->returns = [];
+    }
+
+    /**
+     * Clear invokes stack for method.
+     *
+     * @param string $method
+     */
+    public function delusionResetInvokesCounter($method)
+    {
+        unset($this->invokes[$method]);
+    }
+
+    /**
+     * Clear all invokes stack.
+     */
+    public function delusionResetAllInvokesCounter()
+    {
+        unset($this->invokes);
+    }
 
     /**
      * Returns number of method invokes.

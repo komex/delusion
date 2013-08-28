@@ -171,22 +171,37 @@ class Delusion extends \php_user_filter
 
     public function delusionGetInvokesArguments(\$method)
     {
-        return array_key_exists(\$method, \$this->delusionInvokes) ? \$this->delusionInvokes[\$method] : [];
+        return array_key_exists(\$method, \$this->delusion_invokes) ? \$this->delusion_invokes[\$method] : [];
     }
 
     public function delusionSetBehavior(\$method, \$returns)
     {
-        \$this->delusionReturns[\$method] = \$returns;
+        \$this->delusion_returns[\$method] = \$returns;
     }
 
     public function delusionResetBehavior(\$method)
     {
-        unset(\$this->delusionReturns[\$method]);
+        unset(\$this->delusion_returns[\$method]);
     }
 
     public function delusionHasCustomBehavior(\$method)
     {
-        return array_key_exists(\$method, \$this->delusionReturns);
+        return array_key_exists(\$method, \$this->delusion_returns);
+    }
+
+    public function delusionResetAllBehavior()
+    {
+        \$this->delusion_returns = [];
+    }
+
+    public function delusionResetInvokesCounter(\$method)
+    {
+        unset(\$this->delusion_invokes[\$method]);
+    }
+
+    public function delusionResetAllInvokesCounter()
+    {
+        unset(\$this->delusion_invokes);
     }
 
 END;
@@ -245,14 +260,14 @@ END;
         } else {
 END;
         } else {
-            $return_code = $return ? 'return \$this->delusionReturns[__FUNCTION__];' : '';
+            $return_code = $return ? 'return $this->delusion_returns[__FUNCTION__];' : '';
             $code = <<<END
 
-        if (empty(\$this->delusionInvokes[__FUNCTION__])) {
-            \$this->delusionInvokes[__FUNCTION__] = [];
+        if (empty(\$this->delusion_invokes[__FUNCTION__])) {
+            \$this->delusion_invokes[__FUNCTION__] = [];
         }
-        array_push(\$this->delusionInvokes[__FUNCTION__], func_get_args());
-        if (array_key_exists(__FUNCTION__, \$this->delusionReturns)) {
+        array_push(\$this->delusion_invokes[__FUNCTION__], func_get_args());
+        if (array_key_exists(__FUNCTION__, \$this->delusion_returns)) {
             $return_code
         } else {
 END;
@@ -277,7 +292,7 @@ END;
                 $file = $this->composer->findFile($class);
                 $this->broker->processFile($file);
                 $this->current_class = $class;
-                readfile('php://filter/read=delusion.loader/resource=' . $file);
+                include('php://filter/read=delusion.loader/resource=' . $file);
             }
 
             return;
