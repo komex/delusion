@@ -95,7 +95,7 @@ class Delusion extends \php_user_filter
      *
      * @param string $class
      *
-     * @return PuppetThreadInterface
+     * @return ClassBehavior
      * @throws \InvalidArgumentException If class does not loaded.
      */
     public function getClassBehavior($class)
@@ -194,12 +194,8 @@ END;
             $code = substr($code, 0, $position) . $injected_code . substr($code, $position);
 
             foreach ($methods as $method) {
-                if ($method->isConstructor()) {
-                    // @todo Constructor control
-                    $transformed_method = $method->getSource();
-                } elseif ($method->isDestructor()) {
-                    // @todo Destructor control
-                    $transformed_method = $method->getSource();
+                if ($method->isConstructor() || $method->isDestructor()) {
+                    $transformed_method = $this->methodInjector($method, false);
                 } elseif ($method->isAbstract()) {
                     $transformed_method = $method->getSource();
                 } else {
@@ -216,32 +212,40 @@ END;
      * Transform particular method.
      *
      * @param ReflectionMethod $method
+     * @param bool $return Will method return something (needs for constructor)?
      *
      * @return string
      */
-    private function methodInjector(ReflectionMethod $method)
+    private function methodInjector(ReflectionMethod $method, $return = true)
     {
         $source = $method->getSource();
         $start_position = strpos($source, '{') + 1;
         $end_position = strrpos($source, '}');
         $original_code = substr($source, $start_position, $end_position - $start_position);
-
+        $return_code = '';
         if ($method->isStatic()) {
-            $code = <<<END
+            if ($return) {
+                $return_code = <<<END
 
-        \$delusion = \Delusion\Delusion::injection();
-        \$class = \$delusion->getClassBehavior(__CLASS__);
-        \$class->registerInvoke(__FUNCTION__, func_get_args());
-        if (\$class->delusionHasCustomBehavior(__FUNCTION__) !== null) {
             \$return = \$class->getCustomBehavior(__FUNCTION__);
             if (is_callable(\$return)) {
                 return \$return(func_get_args());
             } else {
                 return \$return;
             }
+END;
+            }
+            $code = <<<END
+
+        \$delusion = \Delusion\Delusion::injection();
+        \$class = \$delusion->getClassBehavior(__CLASS__);
+        \$class->registerInvoke(__FUNCTION__, func_get_args());
+        if (\$class->delusionHasCustomBehavior(__FUNCTION__) !== null) {
+            $return_code
         } else {
 END;
         } else {
+            $return_code = $return ? 'return \$this->delusionReturns[__FUNCTION__];' : '';
             $code = <<<END
 
         if (empty(\$this->delusionInvokes[__FUNCTION__])) {
@@ -249,7 +253,7 @@ END;
         }
         array_push(\$this->delusionInvokes[__FUNCTION__], func_get_args());
         if (array_key_exists(__FUNCTION__, \$this->delusionReturns)) {
-            return \$this->delusionReturns[__FUNCTION__];
+            $return_code
         } else {
 END;
         }
@@ -273,7 +277,7 @@ END;
                 $file = $this->composer->findFile($class);
                 $this->broker->processFile($file);
                 $this->current_class = $class;
-                include('php://filter/read=delusion.loader/resource=' . $file);
+                readfile('php://filter/read=delusion.loader/resource=' . $file);
             }
 
             return;
