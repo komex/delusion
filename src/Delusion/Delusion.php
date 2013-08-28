@@ -31,10 +31,6 @@ class Delusion extends \php_user_filter
      */
     private $broker;
     /**
-     * @var bool
-     */
-    private $inject = false;
-    /**
      * @var ClassLoader
      */
     private $composer;
@@ -42,6 +38,10 @@ class Delusion extends \php_user_filter
      * @var string
      */
     private $current_class;
+    /**
+     * @var ClassBehavior[]
+     */
+    private $static_classes = [];
 
     /**
      * Init Delusion.
@@ -78,7 +78,7 @@ class Delusion extends \php_user_filter
     }
 
     /**
-     * Get instance of Delusion.
+     * Starts perform magic.
      *
      * @return Delusion
      */
@@ -113,6 +113,8 @@ class Delusion extends \php_user_filter
     }
 
     /**
+     * Transform original class for getting full control.
+     *
      * @return string
      */
     private function spoof()
@@ -146,8 +148,8 @@ class Delusion extends \php_user_filter
             $str .= $constant->getDocComment() ? $constant->getDocComment() . PHP_EOL : '';
             $str .= $constant->getSource() . PHP_EOL;
         }
-        $str .= '    protected static $delusion_invokes = [];' . PHP_EOL;
-        $str .= '    protected static $delusion_returns = [];' . PHP_EOL;
+        $str .= '    protected $delusion_invokes = [];' . PHP_EOL;
+        $str .= '    protected $delusion_returns = [];' . PHP_EOL;
         /** @var ReflectionProperty $property */
         foreach ($class->getProperties() as $property) {
             $str .= '    ';
@@ -157,80 +159,43 @@ class Delusion extends \php_user_filter
         /** @var ReflectionMethod $method */
         foreach ($class->getOwnMethods() as $method) {
             $str .= '    ';
-            if ($method->isAbstract()) {
+            if ($method->isAbstract() || $method->isConstructor() || $method->isDestructor()) {
                 $str .= $method->getSource();
             } else {
-                $str .= $method->getDocComment() ? $method->getDocComment() . PHP_EOL : '';
-                $str .= '    ';
-                switch (true) {
-                    case $method->isPublic():
-                        $str .= 'public ';
-                        break;
-                    case $method->isProtected():
-                        $str .= 'protected ';
-                        break;
-                    case $method->isPrivate():
-                        $str .= 'private ';
-                        break;
-                }
-                if ($method->isStatic()) {
-                    $str .= 'static ';
-                }
-                $str .= 'function ' . $method->getName() . '(';
-                /** @var ReflectionParameter $parameter */
-                foreach ($method->getParameters() as $parameter) {
-                    $str .= $parameter->getSource();
-                }
-                $str .= <<<END
-
-    {
-        return self::delusion(__FUNCTION__, func_get_args());
-    }
-
-
-END;
+                $str .= $this->methodInjector($method);
             }
         }
 
         $str .= <<<END
-    protected static function delusion(\$method, array \$args)
-    {
-        if (empty(self::\$delusion_invokes[\$method])) {
-            self::\$delusion_invokes[\$method] = [];
-        }
-        array_push(self::\$delusion_invokes[\$method], \$args);
-        if (array_key_exists(\$method, self::\$delusion_returns)) {
-            return self::\$delusion_returns[\$method];
-        } else {
-            \$delusion = \Delusion\Delusion::injection();
-            \$closure = \$delusion::getOriginalClosure(\$method);
-            return \$closure(\$args);
-        }
-    }
 
     public function delusionGetInvokesCount(\$method)
     {
-        return count(self::delusionGetInvokesArguments(\$method));
+        return count(\$this->delusionGetInvokesArguments(\$method));
     }
 
     public function delusionGetInvokesArguments(\$method)
     {
-        if (!array_key_exists(\$method, self::\$delusion_invokes)) {
+        if (!array_key_exists(\$method, \$this->delusionInvokes)) {
             throw new \InvalidArgumentException(
                 sprintf('Delusion method "%s" not found in class %s', \$method, __CLASS__)
             );
         }
-        return self::\$delusion_invokes[\$method];
+        return \$this->delusionInvokes[\$method];
     }
 
     public function delusionSetBehavior(\$method, \$returns)
     {
-        self::\$delusion_returns[\$method] = \$returns;
+        \$this->delusionReturns[\$method] = \$returns;
     }
 
     public function delusionResetBehavior(\$method)
     {
-        unset(self::\$delusion_returns[\$method]);
+        unset(\$this->delusionReturns[\$method]);
+    }
+
+    public function delusionHasCustomBehavior(\$method)
+    {
+        return array_key_exists(\$method, \$this->delusionReturns);
     }
 
 END;
@@ -239,15 +204,68 @@ END;
     }
 
     /**
-     * @param string $class
+     * Transform particular method.
+     *
+     * @param ReflectionMethod $method
+     *
+     * @return string
      */
-    public function getMiracle($class)
+    private function methodInjector(ReflectionMethod $method)
     {
-        $this->inject = true;
-        $this->loadClass($class);
-        $this->inject = false;
+        $source = $method->getSource();
+        $start_position = strpos($source, '{') + 1;
+        $end_position = strrpos($source, '}');
+        $original_code = substr($source, $start_position, $end_position - $start_position);
 
-        return new $class;
+        if ($method->isStatic()) {
+            $code = <<<END
+
+        \$delusion = \Delusion\Delusion::injection();
+        \$class = \$delusion->getClassBehavior(__CLASS__);
+        \$class->registerInvoke(__FUNCTION__, func_get_args());
+        if (\$class->delusionHasCustomBehavior(__FUNCTION__) !== null) {
+            \$return = \$class->getCustomBehavior(__FUNCTION__);
+            if (is_callable(\$return)) {
+                return \$return(func_get_args());
+            } else {
+                return \$return;
+            }
+        } else {
+END;
+        } else {
+            $code = <<<END
+
+        if (empty(\$this->delusionInvokes[__FUNCTION__])) {
+            \$this->delusionInvokes[__FUNCTION__] = [];
+        }
+        array_push(\$this->delusionInvokes[__FUNCTION__], func_get_args());
+        if (array_key_exists(__FUNCTION__, \$this->delusionReturns)) {
+            return \$this->delusionReturns[__FUNCTION__];
+        } else {
+END;
+        }
+
+        return substr($source, 0, $start_position) . $code . $original_code . '}' . substr($source, $end_position);
+    }
+
+    /**
+     * Get behavior of static class.
+     *
+     * @param string $class
+     *
+     * @return PuppetThreadInterface
+     * @throws \InvalidArgumentException If class does not loaded.
+     */
+    public function getClassBehavior($class)
+    {
+        if ($class[0] == '\\') {
+            $class = substr($class, 1);
+        }
+        if (empty($this->static_classes[$class])) {
+            $this->static_classes[$class] = new ClassBehavior($this->broker->getClass($class));
+        }
+
+        return $this->static_classes[$class];
     }
 
     /**
@@ -260,18 +278,16 @@ END;
         if ($class[0] == '\\') {
             $class = substr($class, 1);
         }
-        if ($this->inject) {
-            $prefix = explode('\\', $class, 2)[0];
-            if (!in_array($prefix, ['TokenReflection', 'Delusion'])) {
-                if (!$this->broker->hasClass($class)) {
-                    $file = $this->composer->findFile($class);
-                    $this->broker->processFile($file);
-                    $this->current_class = $class;
-                    include('php://filter/read=delusion.loader/resource=' . $file);
-                }
-
-                return;
+        $prefix = explode('\\', $class, 2)[0];
+        if (!in_array($prefix, ['TokenReflection', 'Delusion'])) {
+            if (!$this->broker->hasClass($class)) {
+                $file = $this->composer->findFile($class);
+                $this->broker->processFile($file);
+                $this->current_class = $class;
+                include('php://filter/read=delusion.loader/resource=' . $file);
             }
+
+            return;
         }
         $this->composer->loadClass($class);
     }

@@ -47,4 +47,13 @@ interface PuppetThreadInterface
      * @param string $method
      */
     public function delusionResetBehavior($method);
+
+    /**
+     * Check if method has custom behavior.
+     *
+     * @param string $method
+     *
+     * @return bool
+     */
+    public function delusionHasCustomBehavior($method);
 }
