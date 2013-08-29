@@ -2,7 +2,7 @@
 /**
  * This file is a part of delusion project.
  *
- * (c) Andrey Kolchenko <komexx@gmail.com>
+ * (c) Andrey Kolchenko <andrey@kolchenko.me>
  */
 
 namespace Tests\Delusion;
@@ -17,7 +17,7 @@ use Unteist\TestCase;
  * Class ClassBehaviorTest
  *
  * @package Tests\Delusion
- * @author Andrey Kolchenko <komexx@gmail.com>
+ * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
 class ClassBehaviorTest extends TestCase
 {
