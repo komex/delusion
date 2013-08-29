@@ -257,9 +257,7 @@ END;
     private function replaceMethods($code, array $methods)
     {
         foreach ($methods as $method) {
-            if ($method->isConstructor() || $method->isDestructor()) {
-                $transformed_method = $this->methodInjector($method, false);
-            } elseif ($method->isAbstract()) {
+            if ($method->isAbstract()) {
                 $transformed_method = $method->getSource();
             } else {
                 $transformed_method = $this->methodInjector($method);
@@ -274,62 +272,109 @@ END;
      * Transform particular method.
      *
      * @param ReflectionMethod $method
-     * @param bool $return Will method return something (needs for constructor)?
      *
      * @return string
      */
-    private function methodInjector(ReflectionMethod $method, $return = true)
+    private function methodInjector(ReflectionMethod $method)
     {
         $source = $method->getSource();
         $offset = (($method->getDocComment()) ? strlen($method->getDocComment()) : 0);
         $start_position = strpos($source, '{', $offset) + 1;
         $end_position = strrpos($source, '}');
         $original_code = substr($source, $start_position, $end_position - $start_position);
-        $return_code = '';
-        if ($method->isStatic()) {
-            if ($return) {
-                $return_code = <<<END
 
-            \$return = \$class->getCustomBehavior(__FUNCTION__);
-            if (is_callable(\$return)) {
-                return \$return(func_get_args());
-            } else {
-                return \$return;
-            }
-END;
-            }
-            $code = <<<END
-
-        \$delusion = \Delusion\Delusion::injection();
-        \$class = \$delusion->getClassBehavior(__CLASS__);
-        \$class->registerInvoke(__FUNCTION__, func_get_args());
-        if (\$class->delusionHasCustomBehavior(__FUNCTION__)) {
-            $return_code
+        $code = PHP_EOL;
+        if ($method->isStatic() || $method->isConstructor() || $method->isDestructor()) {
+            $code .= $this->getMethodDelusionClass();
+        }
+        $code .= $this->getMethodIncreaseInvokes($method->isStatic()) . PHP_EOL;
+        if ($method->isConstructor() || $method->isDestructor()) {
+            $code .= sprintf('if (!%s) { %s }', $this->getMethodBehaviorCondition(true), $original_code);
         } else {
-END;
+            $code .= sprintf(
+                'if (%s) { return %s } else { %s }',
+                $this->getMethodBehaviorCondition($method->isStatic()),
+                $this->getMethodReturnCode($method->isStatic()),
+                $original_code
+            );
+        }
+
+        return substr($source, 0, $start_position) . $code . substr($source, $end_position);
+    }
+
+    /**
+     * Get code which adds a variable with class behavior.
+     *
+     * @return string
+     */
+    private function getMethodDelusionClass()
+    {
+        $definition = '$___delusion = \Delusion\Delusion::injection();' . PHP_EOL;
+
+        return $definition . '$___delusion_class = $___delusion->getClassBehavior(__CLASS__);' . PHP_EOL;
+    }
+
+    /**
+     * Get code which uses in condition of what value will be returned.
+     *
+     * @param bool $static
+     *
+     * @return string
+     */
+    private function getMethodBehaviorCondition($static = false)
+    {
+        if ($static) {
+            return '$___delusion_class->delusionHasCustomBehavior(__FUNCTION__)';
         } else {
-            $return_code = <<<END
+            return 'array_key_exists(__FUNCTION__, $this->delusion_returns)';
+        }
+    }
 
-            \$return = \$this->delusion_returns[__FUNCTION__];
-            if (is_callable(\$return)) {
-                return \$return(func_get_args());
-            } else {
-                return \$return;
-            }
-END;
-            $code = <<<END
-
+    /**
+     * Get code which increases counter of method invokes.
+     *
+     * @param bool $static
+     *
+     * @return string
+     */
+    private function getMethodIncreaseInvokes($static = false)
+    {
+        if ($static) {
+            return '$___delusion_class->registerInvoke(__FUNCTION__, func_get_args());';
+        } else {
+            return <<<END
         if (empty(\$this->delusion_invokes[__FUNCTION__])) {
             \$this->delusion_invokes[__FUNCTION__] = [];
         }
         array_push(\$this->delusion_invokes[__FUNCTION__], func_get_args());
-        if (array_key_exists(__FUNCTION__, \$this->delusion_returns)) {
-            $return_code
-        } else {
 END;
         }
+    }
 
-        return substr($source, 0, $start_position) . $code . $original_code . '}' . substr($source, $end_position);
+    /**
+     * Get code which returns custom value.
+     *
+     * @param bool $static
+     *
+     * @return string
+     */
+    private function getMethodReturnCode($static = false)
+    {
+        if ($static) {
+            $return_code = '$___delusion_return = $___delusion_class->getCustomBehavior(__FUNCTION__);';
+        } else {
+            $return_code = '$___delusion_return = $this->delusion_returns[__FUNCTION__];';
+        }
+        $return_code .= <<<END
+
+            if (is_callable(\$___delusion_return)) {
+                return \$___delusion_return(func_get_args());
+            } else {
+                return \$___delusion_return;
+            }
+END;
+
+        return $return_code;
     }
 
     /**

@@ -67,12 +67,31 @@ class SimpleInstancesTest extends TestCase
     public function testInstancesNotAffectingStatics()
     {
         $delusion = Delusion::injection();
-        $behavior = $delusion->getClassBehavior('SimpleClassA');
-        Assert::identical(0, $behavior->delusionGetInvokesCount('SimpleClassA'));
-        Assert::isFalse($behavior->delusionHasCustomBehavior('SimpleClassA'));
+        $behavior = $delusion->getClassBehavior('Tests\\Delusion\\Resources\\SimpleClassA');
+        Assert::identical(0, $behavior->delusionGetInvokesCount('__construct'));
+        Assert::isFalse($behavior->delusionHasCustomBehavior('__construct'));
         $class = new SimpleClassA();
         Assert::identical('__construct', $class->log[0]);
-        Assert::identical(0, $behavior->delusionGetInvokesCount('SimpleClassA'));
-        Assert::isFalse($behavior->delusionHasCustomBehavior('SimpleClassA'));
+        Assert::identical(0, $behavior->delusionGetInvokesCount('__construct'));
+        Assert::isFalse($behavior->delusionHasCustomBehavior('__construct'));
+    }
+
+    /**
+     * Test working with constructor.
+     */
+    public function testConstructor()
+    {
+        $delusion = Delusion::injection();
+        $behavior = $delusion->getClassBehavior('Tests\\Delusion\\Resources\\SimpleClassA');
+        $behavior->delusionSetBehavior('__construct', null);
+
+        Assert::isTrue($behavior->delusionHasCustomBehavior('__construct'));
+        $class = new SimpleClassA();
+        Assert::isEmpty($class->log);
+
+        $behavior->delusionResetBehavior('__construct');
+        Assert::isFalse($behavior->delusionHasCustomBehavior('__construct'));
+        $class = new SimpleClassA();
+        Assert::count(1, $class->log);
     }
 }
