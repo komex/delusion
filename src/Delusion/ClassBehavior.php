@@ -47,7 +47,7 @@ class ClassBehavior implements PuppetThreadInterface
      */
     public function delusionResetAllInvokesCounter()
     {
-        unset($this->invokes);
+        $this->invokes = [];
     }
 
     /**

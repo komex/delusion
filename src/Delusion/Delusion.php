@@ -237,7 +237,7 @@ class Delusion extends \php_user_filter
 
     public function delusionResetAllInvokesCounter()
     {
-        unset(\$this->delusion_invokes);
+        \$this->delusion_invokes = [];
     }
 
 END;
@@ -281,7 +281,8 @@ END;
     private function methodInjector(ReflectionMethod $method, $return = true)
     {
         $source = $method->getSource();
-        $start_position = strpos($source, '{') + 1;
+        $offset = (($method->getDocComment()) ? strlen($method->getDocComment()) : 0);
+        $start_position = strpos($source, '{', $offset) + 1;
         $end_position = strrpos($source, '}');
         $original_code = substr($source, $start_position, $end_position - $start_position);
         $return_code = '';
