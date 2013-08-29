@@ -1,14 +1,25 @@
 {
     "name": "komex/delusion",
-    "description": "Mocker",
+    "description": "Mock object framework. Allows to mock and stub all classes.",
+    "keywords": [
+        "testing", "test", "unit test", "mock", "stub", "framework"
+    ],
+    "license": "MIT",
+    "type": "library",
     "authors": [
         {
             "name": "Andrey Kolchenko",
-            "email": "andrey@kolchenko.me"
+            "email": "andrey@kolchenko.me",
+            "role": "Developer"
         }
     ],
+    "support": {
+        "email": "andrey@kolchenko.me",
+        "source": "https://github.com/komex/delusion",
+        "issues": "https://github.com/komex/delusion/issues"
+    },
     "require": {
-        "php": ">=5.4",
+        "php": ">=5.4.0",
         "andrewsville/php-token-reflection": "1.3.*"
     },
     "require-dev": {
@@ -19,5 +30,8 @@
             "Delusion": "src",
             "Tests\\Delusion": "tests"
         }
+    },
+    "suggest": {
+        "komex/unteist": "A powerful unit test framework."
     }
 }
