@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Delusion by komex</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/main.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <header>
+        <h1>Delusion</h1>
+        <p>The Mocking framework for PHP unit tests</p>
+      </header>
+
+      <div id="banner">
+        <span id="logo"></span>
+
+        <a href="https://github.com/komex/delusion" class="button fork"><strong>View On GitHub</strong></a>
+        <div class="downloads">
+          <span>Downloads:</span>
+          <ul>
+            <li><a href="https://github.com/komex/delusion/zipball/master" class="button">ZIP</a></li>
+            <li><a href="https://github.com/komex/delusion/tarball/master" class="button">TAR</a></li>
+          </ul>
+        </div>
+      </div><!-- end banner -->
+
+    <div class="wrapper">
+      <nav>
+        <ul></ul>
+      </nav>
+      <section>
+        <h3>
+<a name="about-framework" class="anchor" href="#about-framework"><span class="octicon octicon-link"></span></a>About framework</h3>
+
+<p>Delusion is a testing instrument for programmers and quality engineers that helps them to test PHP projects by giving ability to mock and stub any objects in realtime. It's works only with projects which uses <a href="http://getcomposer.org/">Composer</a>.</p>
+
+<h3>
+<a name="how-to-use" class="anchor" href="#how-to-use"><span class="octicon octicon-link"></span></a>How to use</h3>
+
+<p>It's very easy to use Delusion in your tests. First of all you must inject it before all tests. You can use <code>bootstrap</code> parameter in <a href="http://phpunit.de/manual/3.7/en/appendixes.configuration.html#appendixes.configuration.phpunit">PHPUnit</a> or <a href="https://github.com/komex/unteist">Unteist</a> configuration to specify path to bootstrap file.
+In this file you need to include Composer autoload first if it's not included yet (does not need in case of using Unteist framework) and start Delusion injection. Bootstrap file may looks like this:</p>
+
+<div class="highlight"><pre><span class="o">&lt;?</span><span class="nx">php</span>
+<span class="k">require</span> <span class="s1">'vendor/autoload.php'</span><span class="p">;</span>
+<span class="nx">\Delusion\Delusion</span><span class="o">::</span><span class="na">inject</span><span class="p">();</span>
+</pre></div>
+
+<p>Now you can controll all instances and static classes loaded after last line.</p>
+
+<h3>
+<a name="control-new-objects-simple-example" class="anchor" href="#control-new-objects-simple-example"><span class="octicon octicon-link"></span></a>Control new objects (simple example)</h3>
+
+<p>At the first blush, you will not see the difference. You can check class name, interface, methods and variables. You can invoke any methods and you will get real object behavior. Lets check it with simple class.</p>
+
+<div class="highlight"><pre><span class="o">&lt;?</span><span class="nx">php</span>
+<span class="c1">// file SimpleClass.php</span>
+<span class="k">class</span> <span class="nc">SimpleClass</span> <span class="k">extends</span> <span class="nx">SplDoublyLinkedList</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="nv">$var</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">(</span><span class="nv">$var</span> <span class="o">=</span> <span class="k">null</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nv">$var</span> <span class="o">!==</span> <span class="k">null</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">var</span> <span class="o">=</span> <span class="nv">$var</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">getVar</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">var</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>Now we will check class behavior.</p>
+
+<div class="highlight"><pre><span class="o">&lt;?</span><span class="nx">php</span>
+<span class="c1">// First instance</span>
+<span class="nv">$class1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">SimpleClass</span><span class="p">;</span>
+<span class="nb">get_class</span><span class="p">(</span><span class="nv">$class1</span><span class="p">);</span> <span class="c1">// SimpleClass</span>
+<span class="nb">is_subclass_of</span><span class="p">(</span><span class="nv">$class1</span><span class="p">,</span> <span class="s1">'SplDoublyLinkedList'</span><span class="p">);</span> <span class="c1">// true</span>
+<span class="nb">is_subclass_of</span><span class="p">(</span><span class="nv">$class1</span><span class="p">,</span> <span class="s1">'SplFixedArray'</span><span class="p">);</span> <span class="c1">// false</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">var</span><span class="p">;</span> <span class="c1">// 2</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">getVar</span><span class="p">();</span> <span class="c1">// 2</span>
+
+<span class="c1">// Second instance (with parameter in constructor)</span>
+<span class="nv">$class2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">SimpleClass</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+<span class="nb">get_class</span><span class="p">(</span><span class="nv">$class1</span><span class="p">);</span> <span class="c1">// SimpleClass</span>
+<span class="nb">is_subclass_of</span><span class="p">(</span><span class="nv">$class1</span><span class="p">,</span> <span class="s1">'SplDoublyLinkedList'</span><span class="p">);</span> <span class="c1">// true</span>
+<span class="nb">is_subclass_of</span><span class="p">(</span><span class="nv">$class1</span><span class="p">,</span> <span class="s1">'SplFixedArray'</span><span class="p">);</span> <span class="c1">// false</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">var</span><span class="p">;</span> <span class="c1">// 3</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">getVar</span><span class="p">();</span> <span class="c1">// 3</span>
+</pre></div>
+
+<p>Looks like nothing happened. But let's do some magic.</p>
+
+<div class="highlight"><pre><span class="o">&lt;?</span><span class="nx">php</span>
+<span class="c1">// First instance</span>
+<span class="nv">$class1</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">SimpleClass</span><span class="p">;</span>
+<span class="nv">$class1</span> <span class="nx">instanceof</span> <span class="nx">\Delusion\PuppetThreadInterface</span><span class="p">;</span> <span class="c1">// true. Class has a new methods!</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">var</span><span class="p">;</span> <span class="c1">// 2</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">getVar</span><span class="p">();</span> <span class="c1">// 2</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">delusionSetBehavior</span><span class="p">(</span><span class="s1">'getVar'</span><span class="p">,</span> <span class="s1">'a new value'</span><span class="p">);</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">var</span><span class="p">;</span> <span class="c1">// 2</span>
+<span class="nv">$class1</span><span class="o">-&gt;</span><span class="na">getVar</span><span class="p">();</span> <span class="c1">// 'a new value'</span>
+
+<span class="nv">$class2</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">SimpleClass</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+<span class="nv">$class2</span><span class="o">-&gt;</span><span class="na">var</span><span class="p">;</span> <span class="c1">// 3</span>
+<span class="nv">$class2</span><span class="o">-&gt;</span><span class="na">getVar</span><span class="p">();</span> <span class="c1">// 3</span>
+</pre></div>
+
+<p>The <code>var</code> in first class is 2, but method returns a string which we set by <code>delusionSetBehavior()</code> method. The second class works as designed.</p>
+
+<h3>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
+
+<p>Just add Delusion project to <code>require</code> or <code>require-dev</code> section in your composer.json and do update.</p>
+
+<div class="highlight"><pre><span class="p">{</span>
+    <span class="nt">"require-dev"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">"komex/delusion"</span><span class="p">:</span> <span class="s2">"dev-develop"</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>Now you can do anything with all objects in your project.</p>
+
+<h3>
+<a name="authors" class="anchor" href="#authors"><span class="octicon octicon-link"></span></a>Authors</h3>
+
+<p>This project was founded by Andrey Kolchenko (<a href="https://github.com/komex" class="user-mention">@komex</a>) in August of 2013.</p>
+
+<h3>
+<a name="support-or-contact" class="anchor" href="#support-or-contact"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
+
+<p>Having trouble with Delusion? Contact <a href="mailto:andrey@kolchenko.me">andrey@kolchenko.me</a> and we’ll help you in the short time.</p>
+      </section>
+      <footer>
+        <p>Project maintained by <a href="https://github.com/komex">komex</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-17427455-2");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
