@@ -29,7 +29,7 @@ The installation of Delusion framework is very simple. All what you need to do i
 
 ## Authors
 
-This project was founded by Andrey Kolchenko (@komex) in August of 2013.
+This project was founded by [Andrey Kolchenko](https://github.com/komex) in August of 2013.
 
 ## Support or Contact
 
