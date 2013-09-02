@@ -1,8 +1,9 @@
 {
     "name": "komex/delusion",
-    "description": "Mock object framework. Allows to mock and stub all classes.",
+    "description": "Mock object instrument. Allows to mock and stub all classes.",
+    "homepage": "http://komex.github.io/delusion/",
     "keywords": [
-        "testing", "test", "unit test", "mock", "stub", "framework"
+        "testing", "test", "unit test", "mock", "stub", "framework", "instrument"
     ],
     "license": "MIT",
     "type": "library",
