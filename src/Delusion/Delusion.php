@@ -114,6 +114,16 @@ class Delusion extends \php_user_filter
         return $this->static_classes[$class];
     }
 
+    public function getMethodSwitcher($original_code, $static)
+    {
+        return sprintf(
+            'if (%s) { return %s } else { %s }',
+            $this->getMethodBehaviorCondition($static),
+            $this->getMethodReturnCode($static),
+            $original_code
+        );
+    }
+
     /**
      * Find composer ClassLoader and unregister its autoload.
      *
@@ -282,20 +292,16 @@ END;
         $end_position = strrpos($source, '}');
         $original_code = substr($source, $start_position, $end_position - $start_position);
 
-        $code = PHP_EOL;
-        if ($method->isStatic() || $method->isConstructor() || $method->isDestructor()) {
-            $code .= $this->getMethodDelusionClass();
-        }
+        $code = PHP_EOL . $this->getMethodDelusionClass();
         $code .= $this->getMethodIncreaseInvokes($method->isStatic()) . PHP_EOL;
         if ($method->isConstructor() || $method->isDestructor()) {
             $code .= sprintf('if (!%s) { %s }', $this->getMethodBehaviorCondition(true), $original_code);
         } else {
-            $code .= sprintf(
-                'if (%s) { return %s } else { %s }',
-                $this->getMethodBehaviorCondition($method->isStatic()),
-                $this->getMethodReturnCode($method->isStatic()),
-                $original_code
-            );
+            if (!$method->isStatic()) {
+                $original_code = $this->getMethodSwitcher($original_code, true);
+            }
+            $code .= $this->getMethodSwitcher($original_code, $method->isStatic());
+
         }
 
         return substr($source, 0, $start_position) . $code . substr($source, $end_position);

@@ -21,6 +21,19 @@ use Unteist\TestCase;
 class SimpleInstancesTest extends TestCase
 {
     /**
+     * @var Delusion
+     */
+    private $delusion;
+
+    /**
+     * @beforeCase
+     */
+    public function setUpBeforeCase()
+    {
+        $this->delusion = Delusion::injection();
+    }
+
+    /**
      * @return array
      */
     public function dpOriginalBehavior()
@@ -66,8 +79,7 @@ class SimpleInstancesTest extends TestCase
      */
     public function testInstancesNotAffectingStatics()
     {
-        $delusion = Delusion::injection();
-        $behavior = $delusion->getClassBehavior('Tests\\Delusion\\Resources\\SimpleClassA');
+        $behavior = $this->delusion->getClassBehavior('Tests\\Delusion\\Resources\\SimpleClassA');
         Assert::identical(0, $behavior->delusionGetInvokesCount('__construct'));
         Assert::isFalse($behavior->delusionHasCustomBehavior('__construct'));
         $class = new SimpleClassA();
@@ -81,8 +93,7 @@ class SimpleInstancesTest extends TestCase
      */
     public function testConstructor()
     {
-        $delusion = Delusion::injection();
-        $behavior = $delusion->getClassBehavior('Tests\\Delusion\\Resources\\SimpleClassA');
+        $behavior = $this->delusion->getClassBehavior('Tests\\Delusion\\Resources\\SimpleClassA');
         $behavior->delusionSetBehavior('__construct', null);
 
         Assert::isTrue($behavior->delusionHasCustomBehavior('__construct'));
@@ -93,5 +104,21 @@ class SimpleInstancesTest extends TestCase
         Assert::isFalse($behavior->delusionHasCustomBehavior('__construct'));
         $class = new SimpleClassA();
         Assert::count(1, $class->log);
+    }
+
+    public function testCustomDefaults()
+    {
+        $behavior = $this->delusion->getClassBehavior('Tests\\Delusion\\Resources\\SimpleClassA');
+        $behavior->delusionSetBehavior('publicMethod', 'default value');
+
+        $class2 = new SimpleClassA();
+        Assert::identical('default value', $class2->publicMethod());
+        $class3 = new SimpleClassA();
+        Assert::identical('default value', $class3->publicMethod());
+
+        $behavior->delusionResetBehavior('publicMethod');
+
+        $class4 = new SimpleClassA();
+        Assert::identical(3, $class4->publicMethod());
     }
 }
