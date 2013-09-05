@@ -258,10 +258,9 @@ END;
     {
         foreach ($methods as $method) {
             if ($method->isAbstract()) {
-                $transformed_method = $method->getSource();
-            } else {
-                $transformed_method = $this->methodInjector($method);
+                continue;
             }
+            $transformed_method = $this->methodInjector($method);
             $code = str_replace($method->getSource(), $transformed_method, $code);
         }
 
