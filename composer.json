@@ -24,7 +24,7 @@
         "andrewsville/php-token-reflection": "1.3.*"
     },
     "require-dev": {
-        "komex/unteist": "dev-develop"
+        "komex/unteist": "1.0.*"
     },
     "autoload": {
         "psr-0": {
