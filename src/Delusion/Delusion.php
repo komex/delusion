@@ -106,7 +106,7 @@ class Delusion extends \php_user_filter
      */
     public function setBlackList(array $black_list)
     {
-        $this->black_list = $black_list;
+        $this->black_list = array_map([$this, 'formatClass'], $black_list);
     }
 
     /**
@@ -116,6 +116,7 @@ class Delusion extends \php_user_filter
      */
     public function addToBlackList($namespace)
     {
+        $namespace = $this->formatClass($namespace);
         array_push($this->black_list, $namespace);
         $this->black_list = array_unique($this->black_list);
     }
@@ -151,7 +152,7 @@ class Delusion extends \php_user_filter
      */
     public function setWhiteList(array $white_list)
     {
-        $this->white_list = $white_list;
+        $this->white_list = array_map([$this, 'formatClass'], $white_list);
     }
 
     /**
@@ -161,6 +162,7 @@ class Delusion extends \php_user_filter
      */
     public function addToWhiteList($namespace)
     {
+        $namespace = $this->formatClass($namespace);
         array_push($this->white_list, $namespace);
         $this->white_list = array_unique($this->white_list);
     }
@@ -242,6 +244,37 @@ class Delusion extends \php_user_filter
             $this->getMethodReturnCode($static),
             $original_code
         );
+    }
+
+    /**
+     * Format class.
+     *
+     * @param string $class
+     *
+     * @return string
+     */
+    private function formatClass($class)
+    {
+        return ltrim($class, '\\');
+    }
+
+    /**
+     * Check if namespace exists in list.
+     *
+     * @param array $list
+     * @param string $namespace
+     *
+     * @return bool
+     */
+    private function inList(array $list, $namespace)
+    {
+        foreach ($list as $pattern) {
+            if (strpos($pattern, $namespace) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -509,9 +542,7 @@ END;
      */
     private function loadClass($class)
     {
-        if ($class[0] == '\\') {
-            $class = substr($class, 1);
-        }
+        $class = $this->formatClass($class);
         $prefix = explode('\\', $class, 2)[0];
         if (!in_array($prefix, ['TokenReflection', 'Delusion'])) {
             if (!$this->broker->hasClass($class)) {
