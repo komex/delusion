@@ -252,10 +252,18 @@ class Delusion extends \php_user_filter
         return $this->static_classes[$class];
     }
 
+    /**
+     * Get behavior condition code.
+     *
+     * @param string $original_code
+     * @param bool $static
+     *
+     * @return string
+     */
     public function getMethodSwitcher($original_code, $static)
     {
         return sprintf(
-            'if (%s) { return %s } else { %s }',
+            'if (%s) { %s } else { %s }',
             $this->getMethodBehaviorCondition($static),
             $this->getMethodReturnCode($static),
             $original_code
