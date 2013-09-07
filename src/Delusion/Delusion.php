@@ -111,10 +111,10 @@ class Delusion extends \php_user_filter
      */
     public function setBlackList(array $black_list)
     {
-        $black_list = array_values($black_list);
         array_push($black_list, 'Delusion', 'TokenReflection');
         $black_list = array_map([$this, 'formatClass'], $black_list);
-        $this->black_list = array_unique($black_list);
+        $black_list = array_unique($black_list);
+        $this->black_list = array_values($black_list);
     }
 
     /**
@@ -136,6 +136,9 @@ class Delusion extends \php_user_filter
      */
     public function removeFromBlackList($namespace)
     {
+        if ($namespace == 'Delusion' || $namespace == 'TokenReflection') {
+            return;
+        }
         foreach ($this->black_list as $i => $pattern) {
             if (strpos($pattern, $namespace) === 0) {
                 unset($this->black_list[$i]);
@@ -160,7 +163,6 @@ class Delusion extends \php_user_filter
      */
     public function setWhiteList(array $white_list)
     {
-        $white_list = array_values($white_list);
         $white_list = array_map([$this, 'formatClass'], $white_list);
         $position = array_search('Delusion', $white_list);
         if ($position !== false) {
@@ -170,7 +172,7 @@ class Delusion extends \php_user_filter
         if ($position !== false) {
             array_splice($white_list, $position, 1);
         }
-        $this->white_list = array_unique($white_list);
+        $this->white_list = array_values(array_unique($white_list));
     }
 
     /**
