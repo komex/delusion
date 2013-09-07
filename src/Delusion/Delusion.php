@@ -59,7 +59,7 @@ class Delusion extends \php_user_filter
     /**
      * @var array
      */
-    private $black_list = [];
+    private $black_list = ['Delusion', 'TokenReflection'];
 
     /**
      * Init Delusion.
@@ -106,7 +106,10 @@ class Delusion extends \php_user_filter
      */
     public function setBlackList(array $black_list)
     {
-        $this->black_list = array_map([$this, 'formatClass'], $black_list);
+        $black_list = array_values($black_list);
+        array_push($black_list, 'Delusion', 'TokenReflection');
+        $black_list = array_map([$this, 'formatClass'], $black_list);
+        $this->black_list = array_unique($black_list);
     }
 
     /**
@@ -152,16 +155,29 @@ class Delusion extends \php_user_filter
      */
     public function setWhiteList(array $white_list)
     {
-        $this->white_list = array_map([$this, 'formatClass'], $white_list);
+        $white_list = array_values($white_list);
+        $white_list = array_map([$this, 'formatClass'], $white_list);
+        $position = array_search('Delusion', $white_list);
+        if ($position !== false) {
+            array_splice($white_list, $position, 1);
+        }
+        $position = array_search('TokenReflection', $white_list);
+        if ($position !== false) {
+            array_splice($white_list, $position, 1);
+        }
+        $this->white_list = array_unique($white_list);
     }
 
     /**
-     * Add a namespace to black list.
+     * Add a namespace to white list.
      *
      * @param string $namespace Full or part of namespace
      */
     public function addToWhiteList($namespace)
     {
+        if ($namespace == 'Delusion' || $namespace == 'TokenReflection') {
+            return;
+        }
         $namespace = $this->formatClass($namespace);
         array_push($this->white_list, $namespace);
         $this->white_list = array_unique($this->white_list);
@@ -269,7 +285,7 @@ class Delusion extends \php_user_filter
     private function inList(array $list, $namespace)
     {
         foreach ($list as $pattern) {
-            if (strpos($pattern, $namespace) === 0) {
+            if (strpos($namespace, $pattern) === 0) {
                 return true;
             }
         }
@@ -539,24 +555,31 @@ END;
      * Load class by its name.
      *
      * @param string $class
+     *
+     * @return bool
      */
     private function loadClass($class)
     {
         $class = $this->formatClass($class);
-        $prefix = explode('\\', $class, 2)[0];
-        if (!in_array($prefix, ['TokenReflection', 'Delusion'])) {
+        if ($this->strategy === self::STRATEGY_ALLOW) {
+            $use_custom_loader = !$this->inList($this->black_list, $class);
+        } else {
+            $use_custom_loader = $this->inList($this->white_list, $class);
+        }
+        if ($use_custom_loader) {
             if (!$this->broker->hasClass($class)) {
                 $file = $this->composer->findFile($class);
                 if (empty($file)) {
-                    return;
+                    return false;
                 }
                 $this->broker->processFile($file);
                 $this->current_class = $class;
                 include('php://filter/read=delusion.loader/resource=' . $file);
-            }
 
-            return;
+                return true;
+            }
         }
-        $this->composer->loadClass($class);
+
+        return $this->composer->loadClass($class) ? true : false;
     }
 }
