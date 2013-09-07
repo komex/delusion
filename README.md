@@ -4,6 +4,8 @@ About project
 Delusion is a testing instrument for programmers and quality engineers that helps them to test PHP projects by giving
 ability to mock and stub any objects in realtime. It's works only with projects which uses [Composer](http://getcomposer.org/).
 
+[![Build Status](https://travis-ci.org/komex/delusion.png?branch=develop)](https://travis-ci.org/komex/delusion)
+
 ## Using
 
 Just add one line of code before all tests to get ability to do anything with all not build-in objects and static classes:
