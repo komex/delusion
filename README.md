@@ -6,13 +6,13 @@ ability to mock and stub any objects in realtime. It's works only with projects 
 
 ## Using
 
-Just add one line of code before all tests to get ability to do anything with all objects and static classes:
+Just add one line of code before all tests to get ability to do anything with all not build-in objects and static classes:
 
 ```php
 \Delusion\Delusion::injection();
 ```
 
-After this injection all classes implements ```\Delusion\PuppetThreadInterface```.
+After this injection all your classes will implements ```\Delusion\PuppetThreadInterface```.
 
 ## Installing
 
