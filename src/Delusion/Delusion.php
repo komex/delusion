@@ -60,6 +60,10 @@ class Delusion extends \php_user_filter
      * @var array
      */
     private $black_list = ['Delusion', 'TokenReflection'];
+    /**
+     * @var string
+     */
+    private $prefix;
 
     /**
      * Init Delusion.
@@ -68,6 +72,7 @@ class Delusion extends \php_user_filter
      */
     private function __construct()
     {
+        $this->prefix = sprintf('___delusion_%s___', substr(sha1(rand()), 0, 5));
         $autoloaders = spl_autoload_functions();
         $this->composer = $this->findComposer($autoloaders);
         spl_autoload_register([$this, 'loadClass'], true, true);
@@ -242,9 +247,7 @@ class Delusion extends \php_user_filter
      */
     public function getClassBehavior($class)
     {
-        if ($class[0] == '\\') {
-            $class = substr($class, 1);
-        }
+        $class = $this->formatClass($class);
         if (empty($this->static_classes[$class])) {
             $this->static_classes[$class] = new ClassBehavior($this->broker->getClass($class));
         }
@@ -260,7 +263,7 @@ class Delusion extends \php_user_filter
      *
      * @return string
      */
-    public function getMethodSwitcher($original_code, $static)
+    private function getMethodSwitcher($original_code, $static)
     {
         return sprintf(
             'if (%s) { %s } else { %s }',
@@ -383,9 +386,10 @@ class Delusion extends \php_user_filter
      */
     private function addDelusionMethods($code, ReflectionMethod $method)
     {
+        $prefix = self::$instance->prefix;
         $injected_code = <<<END
-    protected \$delusion_invokes = [];
-    protected \$delusion_returns = [];
+    protected \${$prefix}invokes = [];
+    protected \${$prefix}returns = [];
 
     public function delusionGetInvokesCount(\$method)
     {
@@ -394,37 +398,37 @@ class Delusion extends \php_user_filter
 
     public function delusionGetInvokesArguments(\$method)
     {
-        return array_key_exists(\$method, \$this->delusion_invokes) ? \$this->delusion_invokes[\$method] : [];
+        return array_key_exists(\$method, \$this->{$prefix}invokes) ? \$this->{$prefix}invokes[\$method] : [];
     }
 
     public function delusionSetBehavior(\$method, \$returns)
     {
-        \$this->delusion_returns[\$method] = \$returns;
+        \$this->{$prefix}returns[\$method] = \$returns;
     }
 
     public function delusionResetBehavior(\$method)
     {
-        unset(\$this->delusion_returns[\$method]);
+        unset(\$this->{$prefix}returns[\$method]);
     }
 
     public function delusionHasCustomBehavior(\$method)
     {
-        return array_key_exists(\$method, \$this->delusion_returns);
+        return array_key_exists(\$method, \$this->{$prefix}returns);
     }
 
     public function delusionResetAllBehavior()
     {
-        \$this->delusion_returns = [];
+        \$this->{$prefix}returns = [];
     }
 
     public function delusionResetInvokesCounter(\$method)
     {
-        unset(\$this->delusion_invokes[\$method]);
+        unset(\$this->{$prefix}invokes[\$method]);
     }
 
     public function delusionResetAllInvokesCounter()
     {
-        \$this->delusion_invokes = [];
+        \$this->{$prefix}invokes = [];
     }
 
 END;
@@ -491,9 +495,10 @@ END;
      */
     private function getMethodDelusionClass()
     {
-        $definition = '$___delusion = \Delusion\Delusion::injection();' . PHP_EOL;
+        $prefix = self::$instance->prefix;
+        $definition = sprintf('$%s = \Delusion\Delusion::injection();', $prefix) . PHP_EOL;
 
-        return $definition . '$___delusion_class = $___delusion->getClassBehavior(__CLASS__);' . PHP_EOL;
+        return $definition . sprintf('$%1$sclass = $%1$s->getClassBehavior(__CLASS__);', $prefix) . PHP_EOL;
     }
 
     /**
@@ -505,10 +510,11 @@ END;
      */
     private function getMethodBehaviorCondition($static = false)
     {
+        $prefix = self::$instance->prefix;
         if ($static) {
-            return '$___delusion_class->delusionHasCustomBehavior(__FUNCTION__)';
+            return sprintf('$%sclass->delusionHasCustomBehavior(__FUNCTION__)', $prefix);
         } else {
-            return 'array_key_exists(__FUNCTION__, $this->delusion_returns)';
+            return sprintf('array_key_exists(__FUNCTION__, $this->%sreturns)', $prefix);
         }
     }
 
@@ -521,14 +527,15 @@ END;
      */
     private function getMethodIncreaseInvokes($static = false)
     {
+        $prefix = self::$instance->prefix;
         if ($static) {
-            return '$___delusion_class->registerInvoke(__FUNCTION__, func_get_args());';
+            return sprintf('$%sclass->registerInvoke(__FUNCTION__, func_get_args());', $prefix);
         } else {
             return <<<END
-        if (empty(\$this->delusion_invokes[__FUNCTION__])) {
-            \$this->delusion_invokes[__FUNCTION__] = [];
+        if (empty(\$this->{$prefix}invokes[__FUNCTION__])) {
+            \$this->{$prefix}invokes[__FUNCTION__] = [];
         }
-        array_push(\$this->delusion_invokes[__FUNCTION__], func_get_args());
+        array_push(\$this->{$prefix}invokes[__FUNCTION__], func_get_args());
 END;
         }
     }
@@ -542,17 +549,18 @@ END;
      */
     private function getMethodReturnCode($static = false)
     {
+        $prefix = self::$instance->prefix;
         if ($static) {
-            $return_code = '$___delusion_return = $___delusion_class->getCustomBehavior(__FUNCTION__);';
+            $return_code = sprintf('$%1$sreturn = $%1$sclass->getCustomBehavior(__FUNCTION__);', $prefix);
         } else {
-            $return_code = '$___delusion_return = $this->delusion_returns[__FUNCTION__];';
+            $return_code = sprintf('$%1$sreturn = $this->%1$sreturns[__FUNCTION__];', $prefix);
         }
         $return_code .= <<<END
 
-            if (is_callable(\$___delusion_return)) {
-                return \$___delusion_return(func_get_args());
+            if (is_callable(\${$prefix}return)) {
+                return \${$prefix}return(func_get_args());
             } else {
-                return \$___delusion_return;
+                return \${$prefix}return;
             }
 END;
 
