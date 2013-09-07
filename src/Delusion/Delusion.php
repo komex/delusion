@@ -21,6 +21,14 @@ use TokenReflection\ReflectionMethod;
 class Delusion extends \php_user_filter
 {
     /**
+     * Loads class if it's not in the black list.
+     */
+    const STRATEGY_ALLOW = 1;
+    /**
+     * Loads class if it's in a white list.
+     */
+    const STRATEGY_DENY = 2;
+    /**
      * @var Delusion
      */
     private static $instance;
@@ -40,6 +48,22 @@ class Delusion extends \php_user_filter
      * @var ClassBehavior[]
      */
     private $static_classes = [];
+    /**
+     * @var int
+     */
+    private $strategy = self::STRATEGY_ALLOW;
+    /**
+     * @var array
+     */
+    private $white_list = [];
+    /**
+     * @var array
+     */
+    private $black_list = ['Delusion', 'TokenReflection'];
+    /**
+     * @var string
+     */
+    private $prefix;
 
     /**
      * Init Delusion.
@@ -48,6 +72,7 @@ class Delusion extends \php_user_filter
      */
     private function __construct()
     {
+        $this->prefix = sprintf('___delusion_%s___', substr(sha1(rand()), 0, 5));
         $autoloaders = spl_autoload_functions();
         $this->composer = $this->findComposer($autoloaders);
         spl_autoload_register([$this, 'loadClass'], true, true);
@@ -67,6 +92,130 @@ class Delusion extends \php_user_filter
         }
 
         return self::$instance;
+    }
+
+    /**
+     * Get list of classes which will not be transformed.
+     *
+     * @return array
+     */
+    public function getBlackList()
+    {
+        return $this->black_list;
+    }
+
+    /**
+     * Set list of classes which will not be transformed.
+     *
+     * @param array $black_list
+     */
+    public function setBlackList(array $black_list)
+    {
+        array_push($black_list, 'Delusion', 'TokenReflection');
+        $black_list = array_map([$this, 'formatClass'], $black_list);
+        $black_list = array_unique($black_list);
+        $this->black_list = array_values($black_list);
+    }
+
+    /**
+     * Add a namespace to black list.
+     *
+     * @param string $namespace Full or part of namespace
+     */
+    public function addToBlackList($namespace)
+    {
+        $namespace = $this->formatClass($namespace);
+        array_push($this->black_list, $namespace);
+        $this->black_list = array_unique($this->black_list);
+    }
+
+    /**
+     * Remove from black list all namespaces which starts with specified namespace.
+     *
+     * @param string $namespace
+     */
+    public function removeFromBlackList($namespace)
+    {
+        $namespace = $this->formatClass($namespace);
+        if ($namespace == 'Delusion' || $namespace == 'TokenReflection') {
+            return;
+        }
+        foreach ($this->black_list as $i => $pattern) {
+            if (strpos($pattern, $namespace) === 0) {
+                unset($this->black_list[$i]);
+            }
+        }
+        $this->black_list = array_values($this->black_list);
+    }
+
+    /**
+     * Get list of classes which will be transformed.
+     *
+     * @return array
+     */
+    public function getWhiteList()
+    {
+        return $this->white_list;
+    }
+
+    /**
+     * Set list of classes which will be transformed.
+     *
+     * @param array $white_list
+     */
+    public function setWhiteList(array $white_list)
+    {
+        $white_list = array_map([$this, 'formatClass'], $white_list);
+        $position = array_search('Delusion', $white_list);
+        if ($position !== false) {
+            array_splice($white_list, $position, 1);
+        }
+        $position = array_search('TokenReflection', $white_list);
+        if ($position !== false) {
+            array_splice($white_list, $position, 1);
+        }
+        $this->white_list = array_values(array_unique($white_list));
+    }
+
+    /**
+     * Add a namespace to white list.
+     *
+     * @param string $namespace Full or part of namespace
+     */
+    public function addToWhiteList($namespace)
+    {
+        if ($namespace == 'Delusion' || $namespace == 'TokenReflection') {
+            return;
+        }
+        $namespace = $this->formatClass($namespace);
+        array_push($this->white_list, $namespace);
+        $this->white_list = array_unique($this->white_list);
+    }
+
+    /**
+     * Remove from white list all namespaces which starts with specified namespace.
+     *
+     * @param string $namespace
+     */
+    public function removeFromWhiteList($namespace)
+    {
+        $namespace = $this->formatClass($namespace);
+        foreach ($this->white_list as $i => $pattern) {
+            if (strpos($pattern, $namespace) === 0) {
+                unset($this->white_list[$i]);
+            }
+        }
+        $this->white_list = array_values($this->white_list);
+    }
+
+    /**
+     * Set loads class strategy.
+     *
+     * @param int $strategy
+     */
+    public function setStrategy($strategy)
+    {
+        $this->strategy = intval($strategy, 10);
     }
 
     /**
@@ -104,9 +253,7 @@ class Delusion extends \php_user_filter
      */
     public function getClassBehavior($class)
     {
-        if ($class[0] == '\\') {
-            $class = substr($class, 1);
-        }
+        $class = $this->formatClass($class);
         if (empty($this->static_classes[$class])) {
             $this->static_classes[$class] = new ClassBehavior($this->broker->getClass($class));
         }
@@ -114,14 +261,53 @@ class Delusion extends \php_user_filter
         return $this->static_classes[$class];
     }
 
-    public function getMethodSwitcher($original_code, $static)
+    /**
+     * Get behavior condition code.
+     *
+     * @param string $original_code
+     * @param bool $static
+     *
+     * @return string
+     */
+    private function getMethodSwitcher($original_code, $static)
     {
         return sprintf(
-            'if (%s) { return %s } else { %s }',
+            'if (%s) { %s } else { %s }',
             $this->getMethodBehaviorCondition($static),
             $this->getMethodReturnCode($static),
             $original_code
         );
+    }
+
+    /**
+     * Format class.
+     *
+     * @param string $class
+     *
+     * @return string
+     */
+    private function formatClass($class)
+    {
+        return ltrim($class, '\\');
+    }
+
+    /**
+     * Check if namespace exists in list.
+     *
+     * @param array $list
+     * @param string $namespace
+     *
+     * @return bool
+     */
+    private function inList(array $list, $namespace)
+    {
+        foreach ($list as $pattern) {
+            if (strpos($namespace, $pattern) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -206,9 +392,10 @@ class Delusion extends \php_user_filter
      */
     private function addDelusionMethods($code, ReflectionMethod $method)
     {
+        $prefix = self::$instance->prefix;
         $injected_code = <<<END
-    protected \$delusion_invokes = [];
-    protected \$delusion_returns = [];
+    protected \${$prefix}invokes = [];
+    protected \${$prefix}returns = [];
 
     public function delusionGetInvokesCount(\$method)
     {
@@ -217,37 +404,37 @@ class Delusion extends \php_user_filter
 
     public function delusionGetInvokesArguments(\$method)
     {
-        return array_key_exists(\$method, \$this->delusion_invokes) ? \$this->delusion_invokes[\$method] : [];
+        return array_key_exists(\$method, \$this->{$prefix}invokes) ? \$this->{$prefix}invokes[\$method] : [];
     }
 
     public function delusionSetBehavior(\$method, \$returns)
     {
-        \$this->delusion_returns[\$method] = \$returns;
+        \$this->{$prefix}returns[\$method] = \$returns;
     }
 
     public function delusionResetBehavior(\$method)
     {
-        unset(\$this->delusion_returns[\$method]);
+        unset(\$this->{$prefix}returns[\$method]);
     }
 
     public function delusionHasCustomBehavior(\$method)
     {
-        return array_key_exists(\$method, \$this->delusion_returns);
+        return array_key_exists(\$method, \$this->{$prefix}returns);
     }
 
     public function delusionResetAllBehavior()
     {
-        \$this->delusion_returns = [];
+        \$this->{$prefix}returns = [];
     }
 
     public function delusionResetInvokesCounter(\$method)
     {
-        unset(\$this->delusion_invokes[\$method]);
+        unset(\$this->{$prefix}invokes[\$method]);
     }
 
     public function delusionResetAllInvokesCounter()
     {
-        \$this->delusion_invokes = [];
+        \$this->{$prefix}invokes = [];
     }
 
 END;
@@ -314,9 +501,10 @@ END;
      */
     private function getMethodDelusionClass()
     {
-        $definition = '$___delusion = \Delusion\Delusion::injection();' . PHP_EOL;
+        $prefix = self::$instance->prefix;
+        $definition = sprintf('$%s = \Delusion\Delusion::injection();', $prefix) . PHP_EOL;
 
-        return $definition . '$___delusion_class = $___delusion->getClassBehavior(__CLASS__);' . PHP_EOL;
+        return $definition . sprintf('$%1$sclass = $%1$s->getClassBehavior(__CLASS__);', $prefix) . PHP_EOL;
     }
 
     /**
@@ -328,10 +516,11 @@ END;
      */
     private function getMethodBehaviorCondition($static = false)
     {
+        $prefix = self::$instance->prefix;
         if ($static) {
-            return '$___delusion_class->delusionHasCustomBehavior(__FUNCTION__)';
+            return sprintf('$%sclass->delusionHasCustomBehavior(__FUNCTION__)', $prefix);
         } else {
-            return 'array_key_exists(__FUNCTION__, $this->delusion_returns)';
+            return sprintf('array_key_exists(__FUNCTION__, $this->%sreturns)', $prefix);
         }
     }
 
@@ -344,14 +533,15 @@ END;
      */
     private function getMethodIncreaseInvokes($static = false)
     {
+        $prefix = self::$instance->prefix;
         if ($static) {
-            return '$___delusion_class->registerInvoke(__FUNCTION__, func_get_args());';
+            return sprintf('$%sclass->registerInvoke(__FUNCTION__, func_get_args());', $prefix);
         } else {
             return <<<END
-        if (empty(\$this->delusion_invokes[__FUNCTION__])) {
-            \$this->delusion_invokes[__FUNCTION__] = [];
+        if (empty(\$this->{$prefix}invokes[__FUNCTION__])) {
+            \$this->{$prefix}invokes[__FUNCTION__] = [];
         }
-        array_push(\$this->delusion_invokes[__FUNCTION__], func_get_args());
+        array_push(\$this->{$prefix}invokes[__FUNCTION__], func_get_args());
 END;
         }
     }
@@ -365,17 +555,18 @@ END;
      */
     private function getMethodReturnCode($static = false)
     {
+        $prefix = self::$instance->prefix;
         if ($static) {
-            $return_code = '$___delusion_return = $___delusion_class->getCustomBehavior(__FUNCTION__);';
+            $return_code = sprintf('$%1$sreturn = $%1$sclass->getCustomBehavior(__FUNCTION__);', $prefix);
         } else {
-            $return_code = '$___delusion_return = $this->delusion_returns[__FUNCTION__];';
+            $return_code = sprintf('$%1$sreturn = $this->%1$sreturns[__FUNCTION__];', $prefix);
         }
         $return_code .= <<<END
 
-            if (is_callable(\$___delusion_return)) {
-                return \$___delusion_return(func_get_args());
+            if (is_callable(\${$prefix}return)) {
+                return \${$prefix}return(func_get_args());
             } else {
-                return \$___delusion_return;
+                return \${$prefix}return;
             }
 END;
 
@@ -386,26 +577,31 @@ END;
      * Load class by its name.
      *
      * @param string $class
+     *
+     * @return bool
      */
     private function loadClass($class)
     {
-        if ($class[0] == '\\') {
-            $class = substr($class, 1);
+        $class = $this->formatClass($class);
+        if ($this->strategy === self::STRATEGY_ALLOW) {
+            $use_custom_loader = !$this->inList($this->black_list, $class);
+        } else {
+            $use_custom_loader = $this->inList($this->white_list, $class);
         }
-        $prefix = explode('\\', $class, 2)[0];
-        if (!in_array($prefix, ['TokenReflection', 'Delusion'])) {
+        if ($use_custom_loader) {
             if (!$this->broker->hasClass($class)) {
                 $file = $this->composer->findFile($class);
                 if (empty($file)) {
-                    return;
+                    return false;
                 }
                 $this->broker->processFile($file);
                 $this->current_class = $class;
                 include('php://filter/read=delusion.loader/resource=' . $file);
-            }
 
-            return;
+                return true;
+            }
         }
-        $this->composer->loadClass($class);
+
+        return $this->composer->loadClass($class) ? true : false;
     }
 }
