@@ -21,6 +21,14 @@ use TokenReflection\ReflectionMethod;
 class Delusion extends \php_user_filter
 {
     /**
+     * Loads class if it's not in the black list.
+     */
+    const STRATEGY_ALLOW = 1;
+    /**
+     * Loads class if it's in a white list.
+     */
+    const STRATEGY_DENY = 2;
+    /**
      * @var Delusion
      */
     private static $instance;
@@ -40,6 +48,18 @@ class Delusion extends \php_user_filter
      * @var ClassBehavior[]
      */
     private $static_classes = [];
+    /**
+     * @var int
+     */
+    private $strategy = self::STRATEGY_ALLOW;
+    /**
+     * @var array
+     */
+    private $white_list = [];
+    /**
+     * @var array
+     */
+    private $black_list = [];
 
     /**
      * Init Delusion.
@@ -67,6 +87,106 @@ class Delusion extends \php_user_filter
         }
 
         return self::$instance;
+    }
+
+    /**
+     * Get list of classes which will not be transformed.
+     *
+     * @return array
+     */
+    public function getBlackList()
+    {
+        return $this->black_list;
+    }
+
+    /**
+     * Set list of classes which will not be transformed.
+     *
+     * @param array $black_list
+     */
+    public function setBlackList(array $black_list)
+    {
+        $this->black_list = $black_list;
+    }
+
+    /**
+     * Add a namespace to black list.
+     *
+     * @param string $namespace Full or part of namespace
+     */
+    public function addToBlackList($namespace)
+    {
+        array_push($this->black_list, $namespace);
+        $this->black_list = array_unique($this->black_list);
+    }
+
+    /**
+     * Remove from black list all namespaces which starts with specified namespace.
+     *
+     * @param string $namespace
+     */
+    public function removeFromBlackList($namespace)
+    {
+        foreach ($this->black_list as $i => $pattern) {
+            if (strpos($pattern, $namespace) === 0) {
+                unset($this->black_list[$i]);
+            }
+        }
+    }
+
+    /**
+     * Get list of classes which will be transformed.
+     *
+     * @return array
+     */
+    public function getWhiteList()
+    {
+        return $this->white_list;
+    }
+
+    /**
+     * Set list of classes which will be transformed.
+     *
+     * @param array $white_list
+     */
+    public function setWhiteList(array $white_list)
+    {
+        $this->white_list = $white_list;
+    }
+
+    /**
+     * Add a namespace to black list.
+     *
+     * @param string $namespace Full or part of namespace
+     */
+    public function addToWhiteList($namespace)
+    {
+        array_push($this->white_list, $namespace);
+        $this->white_list = array_unique($this->white_list);
+    }
+
+    /**
+     * Remove from white list all namespaces which starts with specified namespace.
+     *
+     * @param string $namespace
+     */
+    public function removeFromWhiteList($namespace)
+    {
+        foreach ($this->white_list as $i => $pattern) {
+            if (strpos($pattern, $namespace) === 0) {
+                unset($this->white_list[$i]);
+            }
+        }
+    }
+
+    /**
+     * Set loads class strategy.
+     *
+     * @param int $strategy
+     */
+    public function setStrategy($strategy)
+    {
+        $this->strategy = intval($strategy, 10);
     }
 
     /**
