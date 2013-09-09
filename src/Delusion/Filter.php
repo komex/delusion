@@ -58,7 +58,7 @@ class Filter extends \php_user_filter
             $methods = $class->getOwnMethods();
             if (!empty($methods)) {
                 if (!$class->isTrait()) {
-//                    $code = $this->addDelusionInterface($code, $class);
+                    $code = $this->addDelusionInterface($code, $class);
                     $code = $this->addDelusionMethods($code, $methods[0]);
                 }
                 $code = $this->replaceMethods($code, $methods);
@@ -74,24 +74,58 @@ class Filter extends \php_user_filter
      * @param string $code
      * @param ReflectionClass $class
      *
+     * @throws \LogicException on parsing error
      * @return string
      */
     private function addDelusionInterface($code, ReflectionClass $class)
     {
-        $regexp = sprintf(
-            '/\bclass\s+%s(?:\s+(?:implements|extends)\s+[\w_\\,\s]+)?\s*{/im',
-            quotemeta($class->getShortName())
-        );
-        $corrected = 'class ' . $class->getShortName();
-        if ($class->getParentClassName() != '') {
-            $corrected .= ' extends ' . $class->getParentClassName();
+        if ($class->implementsInterface('Delusion\\PuppetThreadInterface')) {
+            return $code;
         }
-        $interfaces = $class->getOwnInterfaceNames();
-        array_push($interfaces, '\\Delusion\\PuppetThreadInterface');
-        $interfaces = join(', ', array_unique($interfaces));
-        $corrected .= ' implements ' . $interfaces . ' {';
+        $stream = $class->getBroker()->getFileTokens($class->getFileName());
+        $position = $class->getStartPosition();
+        $interfaces = [];
+        $interface_class = '';
+        $implement_position = 0;
+        while (true) {
+            $token = $stream->getTokenName($position);
+            switch ($token) {
+                case 'T_IMPLEMENTS':
+                    $implement_position = $position;
+                    break;
+                case 'T_NS_SEPARATOR':
+                case 'T_STRING':
+                    if ($implement_position > 0) {
+                        $interface_class .= $stream->getTokenValue($position);
+                    }
+                    break;
+                case ',':
+                case 'T_WHITESPACE':
+                    if ($implement_position > 0 && !empty($interface_class)) {
+                        array_push($interfaces, $interface_class);
+                        $interface_class = '';
+                    }
+                    break;
+                case '{':
+                    if ($implement_position > 0) {
+                        $definition = $stream->getSourcePart($class->getStartPosition(), $implement_position - 1);
+                    } else {
+                        $definition = $stream->getSourcePart($class->getStartPosition(), $position - 1);
+                    }
+                    array_push($interfaces, '\\Delusion\\PuppetThreadInterface');
+                    $definition = trim($definition) . ' implements ' . join(', ', $interfaces) . PHP_EOL . '{';
 
-        return preg_replace($regexp, $corrected, $code, 1);
+                    return str_replace(
+                        $stream->getSourcePart($class->getStartPosition(), $position),
+                        $definition,
+                        $code
+                    );
+            }
+            $position++;
+        }
+        throw new \LogicException(
+            'Failed to add \\Delusion\\PuppetThreadInterface to implements for class ' . $class->getName()
+        );
     }
 
     /**
