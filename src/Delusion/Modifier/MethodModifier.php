@@ -52,7 +52,7 @@ class MethodModifier extends Modifier
      */
     protected function getMethodCode()
     {
-        return 'SUPER CODE!!';
+        return '';
     }
 
     /**
@@ -60,6 +60,6 @@ class MethodModifier extends Modifier
      */
     public function getDelusionMethods()
     {
-        return 'DELUSION METHODS!';
+        return '';
     }
 }

@@ -28,11 +28,11 @@ class ClassModifier extends Modifier
 
                 return '';
             case T_IMPLEMENTS:
-                $this->transformer->setModifier(new MethodModifier());
+                $this->filter->setModifier(new MethodModifier());
 
                 return $this->whiteSpace . 'implements \\Delusion\\PuppetThreadInterface,';
             case '{':
-                $this->transformer->setModifier(new MethodModifier());
+                $this->filter->setModifier(new MethodModifier());
 
                 return ' implements \\Delusion\\PuppetThreadInterface' . $this->whiteSpace . '{';
             default:

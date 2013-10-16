@@ -20,11 +20,10 @@
         "issues": "https://github.com/komex/delusion/issues"
     },
     "require": {
-        "php": ">=5.4.0",
-        "andrewsville/php-token-reflection": "1.3.*"
+        "php": ">=5.4.0"
     },
     "require-dev": {
-        "komex/unteist": "1.0.*"
+        "komex/unteist": "dev-develop"
     },
     "autoload": {
         "psr-0": {

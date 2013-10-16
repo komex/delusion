@@ -7,7 +7,7 @@
 
 namespace Delusion\Modifier;
 
-use Delusion\Transformer;
+use Delusion\Filter;
 
 /**
  * Class Modifier
@@ -17,16 +17,16 @@ use Delusion\Transformer;
 class Modifier
 {
     /**
-     * @var Transformer
+     * @var Filter
      */
-    protected $transformer;
+    protected $filter;
 
     /**
-     * @param Transformer $transformer
+     * @param Filter $filter
      */
-    public function setTransformer(Transformer $transformer)
+    public function setFilter(Filter $filter)
     {
-        $this->transformer = $transformer;
+        $this->filter = $filter;
     }
 
     /**
@@ -40,7 +40,7 @@ class Modifier
     public function in($type, $value)
     {
         if ($type === T_CLASS) {
-            $this->transformer->setModifier(new ClassModifier());
+            $this->filter->setModifier(new ClassModifier());
         } elseif ($type === T_TRAIT) {
             // @todo: Trait parser
         }
