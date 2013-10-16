@@ -19,6 +19,10 @@ class ClassModifier extends Modifier
      * @var string
      */
     protected $whiteSpace = '';
+    /**
+     * @var bool
+     */
+    protected $implemented = false;
 
     public function in($type, $value)
     {
@@ -30,12 +34,16 @@ class ClassModifier extends Modifier
             case T_IMPLEMENTS:
                 $whiteSpace = $this->whiteSpace;
                 $this->whiteSpace = '';
+                $this->implemented = true;
 
                 return $whiteSpace . 'implements \\Delusion\\PuppetThreadInterface,';
             case '{':
                 $this->filter->setModifier(new MethodModifier());
+                if (!$this->implemented) {
+                    $value = ' implements \\Delusion\\PuppetThreadInterface';
+                }
 
-                return ' implements \\Delusion\\PuppetThreadInterface' . $this->whiteSpace . '{';
+                return $this->whiteSpace . $value;
             default:
                 $whiteSpace = $this->whiteSpace;
                 $this->whiteSpace = '';
