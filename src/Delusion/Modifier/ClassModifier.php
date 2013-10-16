@@ -28,9 +28,10 @@ class ClassModifier extends Modifier
 
                 return '';
             case T_IMPLEMENTS:
-                $this->filter->setModifier(new MethodModifier());
+                $whiteSpace = $this->whiteSpace;
+                $this->whiteSpace = '';
 
-                return $this->whiteSpace . 'implements \\Delusion\\PuppetThreadInterface,';
+                return $whiteSpace . 'implements \\Delusion\\PuppetThreadInterface,';
             case '{':
                 $this->filter->setModifier(new MethodModifier());
 

@@ -60,6 +60,16 @@ class MethodModifier extends Modifier
      */
     public function getDelusionMethods()
     {
-        return '';
+        return <<<END
+    public function delusionGetInvokesCount(\$method) {}
+    public function delusionGetInvokesArguments(\$method) {}
+    public function delusionSetBehavior(\$method, \$returns) {}
+    public function delusionResetBehavior(\$method) {}
+    public function delusionResetAllBehavior() {}
+    public function delusionHasCustomBehavior(\$method) {}
+    public function delusionResetInvokesCounter(\$method) {}
+    public function delusionResetAllInvokesCounter() {}
+
+END;
     }
 }
