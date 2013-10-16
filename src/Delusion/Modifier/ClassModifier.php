@@ -39,11 +39,9 @@ class ClassModifier extends Modifier
                 return $whiteSpace . 'implements \\Delusion\\PuppetThreadInterface,';
             case '{':
                 $this->filter->setModifier(new MethodModifier());
-                if (!$this->implemented) {
-                    $value = ' implements \\Delusion\\PuppetThreadInterface';
-                }
+                $implements = $this->implemented ? '' : ' implements \\Delusion\\PuppetThreadInterface';
 
-                return $this->whiteSpace . $value;
+                return $implements . $this->whiteSpace . $value;
             default:
                 $whiteSpace = $this->whiteSpace;
                 $this->whiteSpace = '';
