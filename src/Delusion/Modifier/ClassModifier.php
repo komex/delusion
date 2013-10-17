@@ -36,10 +36,10 @@ class ClassModifier extends Modifier
                 $this->whiteSpace = '';
                 $this->implemented = true;
 
-                return $whiteSpace . 'implements \\Delusion\\PuppetThreadInterface,';
+                return $whiteSpace . 'implements \\Delusion\\DelusionInterface,';
             case '{':
                 $this->filter->setModifier(new MethodModifier());
-                $implements = $this->implemented ? '' : ' implements \\Delusion\\PuppetThreadInterface';
+                $implements = $this->implemented ? '' : ' implements \\Delusion\\DelusionInterface';
 
                 return $implements . $this->whiteSpace . $value;
             default:

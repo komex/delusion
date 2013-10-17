@@ -51,6 +51,15 @@ class Filter extends \php_user_filter
     }
 
     /**
+     * @param Modifier $modifier
+     */
+    public function setModifier(Modifier $modifier)
+    {
+        $modifier->setFilter($this);
+        $this->modifier = $modifier;
+    }
+
+    /**
      * Transform original class for getting full control.
      *
      * @throws \InvalidArgumentException If couldn't open file
@@ -67,15 +76,6 @@ class Filter extends \php_user_filter
         } else {
             throw new \InvalidArgumentException;
         }
-    }
-
-    /**
-     * @param Modifier $modifier
-     */
-    public function setModifier(Modifier $modifier)
-    {
-        $modifier->setFilter($this);
-        $this->modifier = $modifier;
     }
 
     /**

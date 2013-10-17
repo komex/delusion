@@ -9,7 +9,7 @@ namespace Tests\Delusion;
 
 use Delusion\ClassBehavior;
 use Delusion\Delusion;
-use Delusion\PuppetThreadInterface;
+use Delusion\DelusionInterface;
 use Tests\Delusion\Resources\SimpleClassA;
 use Unteist\Assert\Assert;
 use Unteist\TestCase;
@@ -139,7 +139,7 @@ class SimpleInstancesTest extends TestCase
      */
     public function testBehaviorPriority()
     {
-        /** @var PuppetThreadInterface|SimpleClassA $class */
+        /** @var DelusionInterface|SimpleClassA $class */
         $class = new SimpleClassA();
         Assert::identical(3, $class->publicMethod());
         $this->behavior->delusionSetBehavior('publicMethod', 'default value');

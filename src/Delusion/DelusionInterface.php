@@ -8,12 +8,12 @@
 namespace Delusion;
 
 /**
- * Interface PuppetThreadInterface
+ * Interface DelusionInterface
  *
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-interface PuppetThreadInterface
+interface DelusionInterface
 {
     /**
      * Returns number of method invokes.

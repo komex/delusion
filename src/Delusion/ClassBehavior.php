@@ -13,7 +13,7 @@ namespace Delusion;
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-class ClassBehavior implements PuppetThreadInterface
+class ClassBehavior implements DelusionInterface
 {
     /**
      * @var array[]
