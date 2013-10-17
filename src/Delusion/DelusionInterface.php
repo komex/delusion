@@ -34,35 +34,6 @@ interface DelusionInterface
     public function delusionGetInvokesArguments($method);
 
     /**
-     * Set behavior for method.
-     *
-     * @param string $method
-     * @param mixed $returns What shall method returns
-     */
-    public function delusionSetBehavior($method, $returns);
-
-    /**
-     * Reset behavior for method to default.
-     *
-     * @param string $method
-     */
-    public function delusionResetBehavior($method);
-
-    /**
-     * Reset class to original state.
-     */
-    public function delusionResetAllBehavior();
-
-    /**
-     * Check if method has custom behavior.
-     *
-     * @param string $method
-     *
-     * @return bool
-     */
-    public function delusionHasCustomBehavior($method);
-
-    /**
      * Clear invokes stack for method.
      *
      * @param string $method
@@ -73,4 +44,51 @@ interface DelusionInterface
      * Clear all invokes stack.
      */
     public function delusionResetAllInvokesCounter();
+
+    /**
+     * Register new method invoke.
+     *
+     * @param string $method
+     * @param array $arguments
+     */
+    public function delusionRegisterInvoke($method, array $arguments);
+
+    /**
+     * Get result of custom behavior for specified method.
+     *
+     * @param string $method
+     * @param array $arguments
+     *
+     * @return mixed
+     */
+    public function delusionGetCustomBehavior($method, array $arguments);
+
+    /**
+     * Check if method has custom behavior and register invoke.
+     *
+     * @param string $method Method name
+     *
+     * @return bool
+     */
+    public function delusionHasCustomBehavior($method);
+
+    /**
+     * Set behavior for method.
+     *
+     * @param string $method
+     * @param mixed $returns What shall method returns
+     */
+    public function delusionSetCustomBehavior($method, $returns);
+
+    /**
+     * Reset behavior for method to default.
+     *
+     * @param string $method
+     */
+    public function delusionResetCustomBehavior($method);
+
+    /**
+     * Reset class to original state.
+     */
+    public function delusionResetAllCustomBehavior();
 }
