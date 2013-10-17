@@ -24,7 +24,7 @@ class ClassModifier extends Modifier
      */
     protected $implemented = false;
 
-    public function in($type, $value)
+    public function process($type, $value)
     {
         switch ($type) {
             case T_WHITESPACE:

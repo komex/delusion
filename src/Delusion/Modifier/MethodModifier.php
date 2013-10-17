@@ -29,6 +29,10 @@ class MethodModifier extends Modifier
      * @var bool
      */
     protected $static = false;
+    /**
+     * @var bool
+     */
+    protected $waitStaticTarget = false;
 
     /**
      * @param int|string $type
@@ -36,7 +40,7 @@ class MethodModifier extends Modifier
      *
      * @return string
      */
-    public function in($type, $value)
+    public function process($type, $value)
     {
         if ($this->inHereDoc) {
             if ($type === T_END_HEREDOC) {
@@ -46,12 +50,10 @@ class MethodModifier extends Modifier
             $value = $this->openBracket($value);
         } elseif ($type === '}') {
             $value = $this->closeBracket($value);
-        } elseif ($type === T_STATIC) {
-            $this->static = true;
-        } elseif ($this->static && $type === T_VARIABLE) {
-            $this->static = false;
         } elseif ($type === T_START_HEREDOC) {
             $this->inHereDoc = true;
+        } else {
+            $this->recognizeStatic($type);
         }
 
         return $value;
@@ -64,14 +66,17 @@ class MethodModifier extends Modifier
      */
     protected function getMethodCode()
     {
+        $condition = '';
         if ($this->static) {
-            $condition = '';
+            $prefix = Delusion::injection()->getPrefix();
+            $class = '$' . $prefix . 'class';
+            $condition .= $class . ' = \\Delusion\\Delusion::injection()->getClassBehavior(__CLASS__); ';
         } else {
-            $condition = sprintf(
-                'if ($this->delusionHasCustomBehavior(%1$s)) return $this->delusionReturn(%1$s, func_get_args());',
-                '__FUNCTION__'
-            );
+            $class = '$this';
         }
+        $condition .= sprintf('%s->delusionRegisterInvoke(__FUNCTION__, func_get_args()); ', $class);
+        $condition .= sprintf('if (%s->delusionHasCustomBehavior(__FUNCTION__)) ', $class);
+        $condition .= sprintf('return %s->delusionGetCustomBehavior(__FUNCTION__, func_get_args());', $class);
 
         return $condition;
     }
@@ -87,32 +92,12 @@ class MethodModifier extends Modifier
 
         return <<<END
     protected \${$prefix}invokes = [];
-    protected \${$prefix}behavior = [];
-    private function delusionReturn(\$method, array \$args) {
-        \$return = \${$prefix}behavior[\$method];
-        if (is_callable(\$return)) {
-            return \$return(\$args);
-        } else {
-            return \$return;
-        }
-    }
+    protected \${$prefix}returns = [];
     public function delusionGetInvokesCount(\$method) {
         return count(\$this->delusionGetInvokesArguments(\$method));
     }
     public function delusionGetInvokesArguments(\$method) {
         return array_key_exists(\$method, \$this->{$prefix}invokes) ? \$this->{$prefix}invokes[\$method] : [];
-    }
-    public function delusionSetBehavior(\$method, \$returns) {
-        \$this->{$prefix}returns[\$method] = \$returns;
-    }
-    public function delusionHasCustomBehavior(\$method) {
-        return array_key_exists(\$method, \$this->{$prefix}returns);
-    }
-    public function delusionResetBehavior(\$method) {
-        unset(\$this->{$prefix}returns[\$method]);
-    }
-    public function delusionResetAllBehavior() {
-        \$this->{$prefix}returns = [];
     }
     public function delusionResetInvokesCounter(\$method) {
         unset(\$this->{$prefix}invokes[\$method]);
@@ -120,8 +105,53 @@ class MethodModifier extends Modifier
     public function delusionResetAllInvokesCounter() {
         \$this->{$prefix}invokes = [];
     }
+    public function delusionRegisterInvoke(\$method, array \$arguments) {
+        if (empty(\$this->{$prefix}invokes[\$method])) {
+            \$this->{$prefix}invokes[\$method] = [];
+        }
+        array_push(\$this->{$prefix}invokes[\$method], \$arguments);
+    }
+    public function delusionGetCustomBehavior(\$method, array \$args) {
+        \$return = \${$prefix}returns[\$method];
+        if (is_callable(\$return)) {
+            \$return = call_user_func_array(\$return, \$args);
+        }
+        return \$return;
+    }
+    public function delusionHasCustomBehavior(\$method) {
+        return array_key_exists(\$method, \$this->{$prefix}returns);
+    }
+    public function delusionSetCustomBehavior(\$method, \$returns) {
+        \$this->{$prefix}returns[\$method] = \$returns;
+    }
+    public function delusionResetCustomBehavior(\$method) {
+        unset(\$this->{$prefix}returns[\$method]);
+    }
+    public function delusionResetAllCustomBehavior() {
+        \$this->{$prefix}returns = [];
+    }
 
 END;
+    }
+
+    /**
+     * Recognize if method is static.
+     *
+     * @param string|int $type Tag value
+     */
+    private function recognizeStatic($type)
+    {
+        if ($type === T_STATIC) {
+            $this->waitStaticTarget = true;
+        } elseif ($this->waitStaticTarget) {
+            if ($type === T_FUNCTION) {
+                $this->static = true;
+                $this->waitStaticTarget = false;
+            } elseif ($type === T_VARIABLE) {
+                $this->static = false;
+                $this->waitStaticTarget = false;
+            }
+        }
     }
 
     /**

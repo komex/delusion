@@ -37,7 +37,7 @@ class Modifier
      *
      * @return string
      */
-    public function in($type, $value)
+    public function process($type, $value)
     {
         if ($type === T_CLASS) {
             $this->filter->setModifier(new ClassModifier());
