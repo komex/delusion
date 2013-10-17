@@ -7,6 +7,8 @@
 
 namespace Delusion\Modifier;
 
+use Delusion\Delusion;
+
 /**
  * Class MethodParser
  *
@@ -40,20 +42,10 @@ class MethodModifier extends Modifier
             if ($type === T_END_HEREDOC) {
                 $this->inHereDoc = false;
             }
-
-            return $value;
-        }
-        if ($type === '{') {
-            if ($this->balance === 0) {
-                $value .= $this->getMethodCode();
-            }
-            $this->static = false;
-            $this->balance++;
+        } elseif ($type === '{') {
+            $value = $this->openBracket($value);
         } elseif ($type === '}') {
-            $this->balance--;
-            if ($this->balance < 0) {
-                $value = $this->getDelusionMethods() . $value;
-            }
+            $value = $this->closeBracket($value);
         } elseif ($type === T_STATIC) {
             $this->static = true;
         } elseif ($this->static && $type === T_VARIABLE) {
@@ -66,28 +58,104 @@ class MethodModifier extends Modifier
     }
 
     /**
+     * Get method controller code.
+     *
      * @return string
      */
     protected function getMethodCode()
     {
-        return '';
+        if ($this->static) {
+            $condition = '';
+        } else {
+            $condition = sprintf(
+                'if ($this->delusionHasCustomBehavior(%1$s)) return $this->delusionReturn(%1$s, func_get_args());',
+                '__FUNCTION__'
+            );
+        }
+
+        return $condition;
     }
 
     /**
+     * Get code for control class.
+     *
      * @return string
      */
-    public function getDelusionMethods()
+    protected function getDelusionMethods()
     {
+        $prefix = Delusion::injection()->getPrefix();
+
         return <<<END
-    public function delusionGetInvokesCount(\$method) {}
-    public function delusionGetInvokesArguments(\$method) {}
-    public function delusionSetBehavior(\$method, \$returns) {}
-    public function delusionResetBehavior(\$method) {}
-    public function delusionResetAllBehavior() {}
-    public function delusionHasCustomBehavior(\$method) {}
-    public function delusionResetInvokesCounter(\$method) {}
-    public function delusionResetAllInvokesCounter() {}
+    protected \${$prefix}invokes = [];
+    protected \${$prefix}behavior = [];
+    private function delusionReturn(\$method, array \$args) {
+        \$return = \${$prefix}behavior[\$method];
+        if (is_callable(\$return)) {
+            return \$return(\$args);
+        } else {
+            return \$return;
+        }
+    }
+    public function delusionGetInvokesCount(\$method) {
+        return count(\$this->delusionGetInvokesArguments(\$method));
+    }
+    public function delusionGetInvokesArguments(\$method) {
+        return array_key_exists(\$method, \$this->{$prefix}invokes) ? \$this->{$prefix}invokes[\$method] : [];
+    }
+    public function delusionSetBehavior(\$method, \$returns) {
+        \$this->{$prefix}returns[\$method] = \$returns;
+    }
+    public function delusionHasCustomBehavior(\$method) {
+        return array_key_exists(\$method, \$this->{$prefix}returns);
+    }
+    public function delusionResetBehavior(\$method) {
+        unset(\$this->{$prefix}returns[\$method]);
+    }
+    public function delusionResetAllBehavior() {
+        \$this->{$prefix}returns = [];
+    }
+    public function delusionResetInvokesCounter(\$method) {
+        unset(\$this->{$prefix}invokes[\$method]);
+    }
+    public function delusionResetAllInvokesCounter() {
+        \$this->{$prefix}invokes = [];
+    }
 
 END;
+    }
+
+    /**
+     * Received open bracket.
+     *
+     * @param string $value Tag value
+     *
+     * @return string
+     */
+    private function openBracket($value)
+    {
+        if ($this->balance === 0) {
+            $value .= $this->getMethodCode();
+        }
+        $this->static = false;
+        $this->balance++;
+
+        return $value;
+    }
+
+    /**
+     * Received close bracket.
+     *
+     * @param string $value Tag value
+     *
+     * @return string
+     */
+    private function closeBracket($value)
+    {
+        $this->balance--;
+        if ($this->balance < 0) {
+            $value = $this->getDelusionMethods() . $value;
+        }
+
+        return $value;
     }
 }
