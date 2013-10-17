@@ -7,7 +7,7 @@
 
 namespace Delusion\Modifier;
 
-use Delusion\Filter;
+use Delusion\Injector;
 
 /**
  * Class Modifier
@@ -17,16 +17,16 @@ use Delusion\Filter;
 class Modifier
 {
     /**
-     * @var Filter
+     * @var Injector
      */
-    protected $filter;
+    protected $injector;
 
     /**
-     * @param Filter $filter
+     * @param Injector $injector
      */
-    public function setFilter(Filter $filter)
+    public function setInjector(Injector $injector)
     {
-        $this->filter = $filter;
+        $this->injector = $injector;
     }
 
     /**
@@ -40,7 +40,7 @@ class Modifier
     public function process($type, $value)
     {
         if ($type === T_CLASS) {
-            $this->filter->setModifier(new ClassModifier());
+            $this->injector->setModifier(new ClassModifier());
         } elseif ($type === T_TRAIT) {
             // @todo: Trait parser
         }

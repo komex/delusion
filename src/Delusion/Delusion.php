@@ -69,7 +69,7 @@ class Delusion
         $autoLoaders = spl_autoload_functions();
         $this->composer = $this->findComposer($autoLoaders);
         spl_autoload_register([$this, 'loadClass'], true, true);
-        stream_filter_register('delusion.loader', 'Delusion\\Filter');
+        stream_filter_register('delusion.loader', 'Delusion\\Injector');
     }
 
     /**

@@ -10,12 +10,12 @@ namespace Delusion;
 use Delusion\Modifier\Modifier;
 
 /**
- * Class Filter
+ * Class Injector
  *
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-class Filter extends \php_user_filter
+class Injector extends \php_user_filter
 {
     /**
      * @var array
@@ -55,7 +55,7 @@ class Filter extends \php_user_filter
      */
     public function setModifier(Modifier $modifier)
     {
-        $modifier->setFilter($this);
+        $modifier->setInjector($this);
         $this->modifier = $modifier;
     }
 
@@ -90,7 +90,7 @@ class Filter extends \php_user_filter
             } else {
                 list($type, $value) = $token;
             }
-            $code .= $this->modifier->in($type, $value);
+            $code .= $this->modifier->process($type, $value);
         }
 
         return $code;
