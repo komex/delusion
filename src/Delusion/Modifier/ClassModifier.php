@@ -38,7 +38,7 @@ class ClassModifier extends Modifier
 
                 return $whiteSpace . 'implements \\Delusion\\DelusionInterface,';
             case '{':
-                $this->injector->setModifier(new MethodModifier());
+                $this->injector->setModifier(new MethodParser());
                 $implements = $this->implemented ? '' : ' implements \\Delusion\\DelusionInterface';
 
                 return $implements . $this->whiteSpace . $value;

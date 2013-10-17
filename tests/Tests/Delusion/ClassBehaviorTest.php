@@ -39,7 +39,8 @@ class ClassBehaviorTest extends TestCase
                 'method3',
                 function () {
                     return 6;
-                }
+                },
+                6
             ],
         ];
     }
@@ -47,15 +48,19 @@ class ClassBehaviorTest extends TestCase
     /**
      * @param string $method
      * @param mixed $returns
+     * @param mixed $expected
      *
      * @dataProvider dpSimpleMethodBehavior
      */
-    public function testSimpleMethodBehavior($method, $returns)
+    public function testSimpleMethodBehavior($method, $returns, $expected = null)
     {
         Assert::isFalse($this->class->delusionHasCustomBehavior($method));
-        $this->class->delusionSetBehavior($method, $returns);
+        $this->class->delusionSetCustomBehavior($method, $returns);
         Assert::isTrue($this->class->delusionHasCustomBehavior($method));
-        Assert::equals($returns, $this->class->getCustomBehavior($method));
+        if ($expected === null) {
+            $expected = $returns;
+        }
+        Assert::equals($expected, $this->class->delusionGetCustomBehavior($method, []));
     }
 
     /**
@@ -63,9 +68,9 @@ class ClassBehaviorTest extends TestCase
      */
     public function testResetMethodBehavior()
     {
-        $this->class->delusionSetBehavior('method1', 1);
-        $this->class->delusionSetBehavior('method2', 2);
-        $this->class->delusionResetBehavior('method1');
+        $this->class->delusionSetCustomBehavior('method1', 1);
+        $this->class->delusionSetCustomBehavior('method2', 2);
+        $this->class->delusionResetCustomBehavior('method1');
         Assert::isFalse($this->class->delusionHasCustomBehavior('method1'));
         Assert::isTrue($this->class->delusionHasCustomBehavior('method2'));
     }
@@ -75,9 +80,9 @@ class ClassBehaviorTest extends TestCase
      */
     public function testResetAllBehavior()
     {
-        $this->class->delusionSetBehavior('method1', 1);
-        $this->class->delusionSetBehavior('method2', 2);
-        $this->class->delusionResetAllBehavior();
+        $this->class->delusionSetCustomBehavior('method1', 1);
+        $this->class->delusionSetCustomBehavior('method2', 2);
+        $this->class->delusionResetAllCustomBehavior();
         Assert::isFalse($this->class->delusionHasCustomBehavior('method1'));
         Assert::isFalse($this->class->delusionHasCustomBehavior('method2'));
     }
@@ -99,7 +104,7 @@ class ClassBehaviorTest extends TestCase
         ];
         foreach ($data_provider as $data) {
             list($method, $arguments, $count) = $data;
-            $this->class->registerInvoke($method, $arguments);
+            $this->class->delusionRegisterInvoke($method, $arguments);
             $invokes_arguments = $this->class->delusionGetInvokesArguments($method);
             Assert::identical($count, $this->class->delusionGetInvokesCount($method));
             Assert::that($invokes_arguments, new AnyValue(new EqualTo($arguments)));
@@ -113,9 +118,9 @@ class ClassBehaviorTest extends TestCase
     {
         Assert::identical(0, $this->class->delusionGetInvokesCount('method1'));
         Assert::identical(0, $this->class->delusionGetInvokesCount('method2'));
-        $this->class->registerInvoke('method1', ['arg1']);
-        $this->class->registerInvoke('method1', ['arg1']);
-        $this->class->registerInvoke('method2', ['arg1']);
+        $this->class->delusionRegisterInvoke('method1', ['arg1']);
+        $this->class->delusionRegisterInvoke('method1', ['arg1']);
+        $this->class->delusionRegisterInvoke('method2', ['arg1']);
         Assert::identical(2, $this->class->delusionGetInvokesCount('method1'));
         Assert::identical(1, $this->class->delusionGetInvokesCount('method2'));
         $this->class->delusionResetInvokesCounter('method1');
@@ -130,9 +135,9 @@ class ClassBehaviorTest extends TestCase
     {
         Assert::identical(0, $this->class->delusionGetInvokesCount('method1'));
         Assert::identical(0, $this->class->delusionGetInvokesCount('method2'));
-        $this->class->registerInvoke('method1', ['arg1']);
-        $this->class->registerInvoke('method1', ['arg1']);
-        $this->class->registerInvoke('method2', ['arg1']);
+        $this->class->delusionRegisterInvoke('method1', ['arg1']);
+        $this->class->delusionRegisterInvoke('method1', ['arg1']);
+        $this->class->delusionRegisterInvoke('method2', ['arg1']);
         Assert::identical(2, $this->class->delusionGetInvokesCount('method1'));
         Assert::identical(1, $this->class->delusionGetInvokesCount('method2'));
         $this->class->delusionResetAllInvokesCounter();

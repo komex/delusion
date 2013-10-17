@@ -70,21 +70,23 @@ class MethodParser extends Modifier
     {
         $condition = '';
         $invoke = '$this';
-        $behavior = '$this';
+        $prefix = Delusion::injection()->getPrefix();
+        $class = '$' . $prefix . 'class';
         if ($this->isConstructor) {
-            $prefix = Delusion::injection()->getPrefix();
-            $behavior = '$' . $prefix . 'class';
-            $condition .= $behavior . ' = \\Delusion\\Delusion::injection()->getClassBehavior(__CLASS__); ';
+            $condition .= $class . ' = \\Delusion\\Delusion::injection()->getClassBehavior(__CLASS__); ';
         } elseif ($this->static) {
-            $prefix = Delusion::injection()->getPrefix();
             $invoke = '$' . $prefix . 'class';
-            $behavior = '$' . $prefix . 'class';
-            $condition .= $behavior . ' = \\Delusion\\Delusion::injection()->getClassBehavior(__CLASS__); ';
+            $condition .= $class . ' = \\Delusion\\Delusion::injection()->getClassBehavior(__CLASS__); ';
         }
 
         $condition .= sprintf('%s->delusionRegisterInvoke(__FUNCTION__, func_get_args()); ', $invoke);
-        $condition .= sprintf('if (%s->delusionHasCustomBehavior(__FUNCTION__)) ', $behavior);
-        $condition .= sprintf('return %s->delusionGetCustomBehavior(__FUNCTION__, func_get_args());', $behavior);
+        if ($this->static) {
+            $condition .= sprintf('if (%s->delusionHasCustomBehavior(__FUNCTION__)) ', $class);
+            $condition .= sprintf('return %s->delusionGetCustomBehavior(__FUNCTION__, func_get_args());', $class);
+        } else {
+            $condition .= sprintf('if ($this->%shasBehavior(__FUNCTION__)) ', $prefix);
+            $condition .= sprintf('return $this->%sgetBehavior(__FUNCTION__, func_get_args());', $prefix);
+        }
 
         return $condition;
     }
@@ -101,6 +103,18 @@ class MethodParser extends Modifier
         return <<<END
     protected \${$prefix}invokes = [];
     protected \${$prefix}returns = [];
+    protected function {$prefix}hasBehavior(\$method) {
+        return (\$this->delusionHasCustomBehavior(\$method) ||
+            \Delusion\Delusion::injection()->getClassBehavior(__CLASS__)->delusionHasCustomBehavior(\$method));
+    }
+    protected function {$prefix}getBehavior(\$method, array \$arguments) {
+        if (\$this->delusionHasCustomBehavior(\$method)) {
+            return \$this->delusionGetCustomBehavior(\$method, \$arguments);
+        } else {
+            \$class = \Delusion\Delusion::injection()->getClassBehavior(__CLASS__);
+            return \$class->delusionGetCustomBehavior(\$method, \$arguments);
+        }
+    }
     public function delusionGetInvokesCount(\$method) {
         return count(\$this->delusionGetInvokesArguments(\$method));
     }
@@ -120,7 +134,7 @@ class MethodParser extends Modifier
         array_push(\$this->{$prefix}invokes[\$method], \$arguments);
     }
     public function delusionGetCustomBehavior(\$method, array \$args) {
-        \$return = \${$prefix}returns[\$method];
+        \$return = \$this->{$prefix}returns[\$method];
         if (is_callable(\$return)) {
             \$return = call_user_func_array(\$return, \$args);
         }
