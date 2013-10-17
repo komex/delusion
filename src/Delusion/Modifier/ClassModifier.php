@@ -29,24 +29,24 @@ class ClassModifier extends Modifier
         switch ($type) {
             case T_WHITESPACE:
                 $this->whiteSpace = $value;
-
-                return '';
+                $value = '';
+                break;
             case T_IMPLEMENTS:
+                $this->implemented = true;
                 $whiteSpace = $this->whiteSpace;
                 $this->whiteSpace = '';
-                $this->implemented = true;
-
-                return $whiteSpace . 'implements \\Delusion\\DelusionInterface,';
+                $value = $whiteSpace . $value;
+                break;
             case '{':
                 $this->injector->setModifier(new MethodParser());
-                $implements = $this->implemented ? '' : ' implements \\Delusion\\DelusionInterface';
-
-                return $implements . $this->whiteSpace . $value;
+                $implements = $this->implemented ? ',' : ' implements';
+                $value = $implements . ' \\Delusion\\DelusionInterface' . $this->whiteSpace . $value;
+                break;
             default:
                 $whiteSpace = $this->whiteSpace;
                 $this->whiteSpace = '';
-
-                return $whiteSpace . $value;
+                $value = $whiteSpace . $value;
         }
+        return $value;
     }
 }
