@@ -8,9 +8,6 @@
 namespace Delusion;
 
 use Composer\Autoload\ClassLoader;
-use TokenReflection\Broker;
-use TokenReflection\ReflectionClass;
-use TokenReflection\ReflectionMethod;
 
 /**
  * Class Delusion
@@ -18,7 +15,7 @@ use TokenReflection\ReflectionMethod;
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-class Delusion extends \php_user_filter
+class Delusion
 {
     /**
      * Loads class if it's not in the black list.
@@ -33,17 +30,13 @@ class Delusion extends \php_user_filter
      */
     private static $instance;
     /**
-     * @var Broker
-     */
-    private $broker;
-    /**
      * @var ClassLoader
      */
     private $composer;
     /**
      * @var string
      */
-    private $current_class;
+    private $fileName;
     /**
      * @var ClassBehavior[]
      */
@@ -59,7 +52,7 @@ class Delusion extends \php_user_filter
     /**
      * @var array
      */
-    private $black_list = ['Delusion', 'TokenReflection'];
+    private $black_list = ['Delusion'];
     /**
      * @var string
      */
@@ -73,11 +66,10 @@ class Delusion extends \php_user_filter
     private function __construct()
     {
         $this->prefix = sprintf('___delusion_%s___', substr(sha1(rand()), 0, 5));
-        $autoloaders = spl_autoload_functions();
-        $this->composer = $this->findComposer($autoloaders);
+        $autoLoaders = spl_autoload_functions();
+        $this->composer = $this->findComposer($autoLoaders);
         spl_autoload_register([$this, 'loadClass'], true, true);
-        $this->broker = new Broker(new Broker\Backend\Memory());
-        stream_filter_register('delusion.loader', 'Delusion\\Filter');
+        stream_filter_register('delusion.loader', 'Delusion\\Injector');
     }
 
     /**
@@ -103,26 +95,26 @@ class Delusion extends \php_user_filter
     }
 
     /**
-     * @return null|ReflectionClass
+     * Check if we have a file to transform.
+     *
+     * @return bool
      */
-    public function getCurrentClass()
+    public function hasFile()
     {
-        if ($this->current_class === null) {
-            return null;
-        } else {
-            $class = $this->broker->getClass($this->current_class);
-            $this->current_class = null;
-
-            return $class;
-        }
+        return $this->fileName !== null;
     }
 
     /**
-     * @return bool
+     * Get filename to transform.
+     *
+     * @return string
      */
-    public function hasCurrentClass()
+    public function getFileName()
     {
-        return $this->current_class !== null;
+        $filename = $this->fileName;
+        $this->fileName = null;
+
+        return $filename;
     }
 
     /**
@@ -142,7 +134,7 @@ class Delusion extends \php_user_filter
      */
     public function setBlackList(array $black_list)
     {
-        array_push($black_list, 'Delusion', 'TokenReflection');
+        array_push($black_list, 'Delusion');
         $black_list = array_map([$this, 'formatClass'], $black_list);
         $black_list = array_unique($black_list);
         $this->black_list = array_values($black_list);
@@ -168,15 +160,14 @@ class Delusion extends \php_user_filter
     public function removeFromBlackList($namespace)
     {
         $namespace = $this->formatClass($namespace);
-        if ($namespace == 'Delusion' || $namespace == 'TokenReflection') {
-            return;
-        }
-        foreach ($this->black_list as $i => $pattern) {
-            if (strpos($pattern, $namespace) === 0) {
-                unset($this->black_list[$i]);
+        if ($namespace !== 'Delusion') {
+            foreach ($this->black_list as $i => $pattern) {
+                if (strpos($pattern, $namespace) === 0) {
+                    unset($this->black_list[$i]);
+                }
             }
+            $this->black_list = array_values($this->black_list);
         }
-        $this->black_list = array_values($this->black_list);
     }
 
     /**
@@ -201,10 +192,6 @@ class Delusion extends \php_user_filter
         if ($position !== false) {
             array_splice($white_list, $position, 1);
         }
-        $position = array_search('TokenReflection', $white_list);
-        if ($position !== false) {
-            array_splice($white_list, $position, 1);
-        }
         $this->white_list = array_values(array_unique($white_list));
     }
 
@@ -215,12 +202,11 @@ class Delusion extends \php_user_filter
      */
     public function addToWhiteList($namespace)
     {
-        if ($namespace == 'Delusion' || $namespace == 'TokenReflection') {
-            return;
+        if ($namespace !== 'Delusion') {
+            $namespace = $this->formatClass($namespace);
+            array_push($this->white_list, $namespace);
+            $this->white_list = array_unique($this->white_list);
         }
-        $namespace = $this->formatClass($namespace);
-        array_push($this->white_list, $namespace);
-        $this->white_list = array_unique($this->white_list);
     }
 
     /**
@@ -261,7 +247,7 @@ class Delusion extends \php_user_filter
     {
         $class = $this->formatClass($class);
         if (empty($this->static_classes[$class])) {
-            $this->static_classes[$class] = new ClassBehavior($this->broker->getClass($class));
+            $this->static_classes[$class] = new ClassBehavior();
         }
 
         return $this->static_classes[$class];
@@ -334,19 +320,16 @@ class Delusion extends \php_user_filter
             $use_custom_loader = $this->inList($this->white_list, $class);
         }
         if ($use_custom_loader) {
-            if (!$this->broker->hasClass($class)) {
-                $file = $this->composer->findFile($class);
-                if (empty($file)) {
-                    return false;
-                }
-                $this->broker->processFile($file);
-                $this->current_class = $class;
-                include('php://filter/read=delusion.loader/resource=' . $file);
-
-                return true;
+            $file = $this->composer->findFile($class);
+            if (empty($file)) {
+                return false;
             }
-        }
+            $this->fileName = $file;
+            include('php://filter/read=delusion.loader/resource=' . $file);
 
-        return $this->composer->loadClass($class) ? true : false;
+            return true;
+        } else {
+            return $this->composer->loadClass($class) ? true : false;
+        }
     }
 }

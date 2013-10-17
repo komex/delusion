@@ -9,7 +9,7 @@ namespace Tests\Delusion;
 
 use Delusion\ClassBehavior;
 use Delusion\Delusion;
-use Delusion\PuppetThreadInterface;
+use Delusion\DelusionInterface;
 use Tests\Delusion\Resources\SimpleClassA;
 use Unteist\Assert\Assert;
 use Unteist\TestCase;
@@ -41,7 +41,7 @@ class SimpleInstancesTest extends TestCase
      */
     public function reset()
     {
-        $this->behavior->delusionResetAllBehavior();
+        $this->behavior->delusionResetAllCustomBehavior();
         $this->behavior->delusionResetAllInvokesCounter();
     }
 
@@ -104,13 +104,13 @@ class SimpleInstancesTest extends TestCase
      */
     public function testConstructor()
     {
-        $this->behavior->delusionSetBehavior('__construct', null);
+        $this->behavior->delusionSetCustomBehavior('__construct', null);
 
         Assert::isTrue($this->behavior->delusionHasCustomBehavior('__construct'));
         $class = new SimpleClassA();
         Assert::isEmpty($class->log);
 
-        $this->behavior->delusionResetBehavior('__construct');
+        $this->behavior->delusionResetCustomBehavior('__construct');
         Assert::isFalse($this->behavior->delusionHasCustomBehavior('__construct'));
         $class = new SimpleClassA();
         Assert::count(1, $class->log);
@@ -121,14 +121,14 @@ class SimpleInstancesTest extends TestCase
      */
     public function testCustomDefaults()
     {
-        $this->behavior->delusionSetBehavior('publicMethod', 'default value');
+        $this->behavior->delusionSetCustomBehavior('publicMethod', 'default value');
 
         $class2 = new SimpleClassA();
         Assert::identical('default value', $class2->publicMethod());
         $class3 = new SimpleClassA();
         Assert::identical('default value', $class3->publicMethod());
 
-        $this->behavior->delusionResetBehavior('publicMethod');
+        $this->behavior->delusionResetCustomBehavior('publicMethod');
 
         $class4 = new SimpleClassA();
         Assert::identical(3, $class4->publicMethod());
@@ -139,12 +139,12 @@ class SimpleInstancesTest extends TestCase
      */
     public function testBehaviorPriority()
     {
-        /** @var PuppetThreadInterface|SimpleClassA $class */
+        /** @var DelusionInterface|SimpleClassA $class */
         $class = new SimpleClassA();
         Assert::identical(3, $class->publicMethod());
-        $this->behavior->delusionSetBehavior('publicMethod', 'default value');
+        $this->behavior->delusionSetCustomBehavior('publicMethod', 'default value');
         Assert::identical('default value', $class->publicMethod());
-        $class->delusionSetBehavior('publicMethod', 'instance');
+        $class->delusionSetCustomBehavior('publicMethod', 'instance');
         Assert::identical('instance', $class->publicMethod());
     }
 }

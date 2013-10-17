@@ -13,7 +13,7 @@ namespace Delusion;
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-class ClassBehavior implements PuppetThreadInterface
+class ClassBehavior implements DelusionInterface
 {
     /**
      * @var array[]
@@ -23,32 +23,6 @@ class ClassBehavior implements PuppetThreadInterface
      * @var array[]
      */
     protected $returns = [];
-
-    /**
-     * Reset class to original state.
-     */
-    public function delusionResetAllBehavior()
-    {
-        $this->returns = [];
-    }
-
-    /**
-     * Clear invokes stack for method.
-     *
-     * @param string $method
-     */
-    public function delusionResetInvokesCounter($method)
-    {
-        unset($this->invokes[$method]);
-    }
-
-    /**
-     * Clear all invokes stack.
-     */
-    public function delusionResetAllInvokesCounter()
-    {
-        $this->invokes = [];
-    }
 
     /**
      * Returns number of method invokes.
@@ -75,30 +49,59 @@ class ClassBehavior implements PuppetThreadInterface
     }
 
     /**
-     * Set behavior for method.
-     *
-     * @param string $method
-     * @param mixed $returns What shall method returns
-     */
-    public function delusionSetBehavior($method, $returns)
-    {
-        $this->returns[$method] = $returns;
-    }
-
-    /**
-     * Reset behavior for method to default.
+     * Clear invokes stack for method.
      *
      * @param string $method
      */
-    public function delusionResetBehavior($method)
+    public function delusionResetInvokesCounter($method)
     {
-        unset($this->returns[$method]);
+        unset($this->invokes[$method]);
     }
 
     /**
-     * Check if method has custom behavior.
+     * Clear all invokes stack.
+     */
+    public function delusionResetAllInvokesCounter()
+    {
+        $this->invokes = [];
+    }
+
+    /**
+     * Register new method invoke.
      *
      * @param string $method
+     * @param array $arguments
+     */
+    public function delusionRegisterInvoke($method, array $arguments)
+    {
+        if (empty($this->invokes[$method])) {
+            $this->invokes[$method] = [];
+        }
+        array_push($this->invokes[$method], $arguments);
+    }
+
+    /**
+     * Get result of custom behavior for specified method.
+     *
+     * @param string $method
+     * @param array $arguments
+     *
+     * @return mixed
+     */
+    public function delusionGetCustomBehavior($method, array $arguments)
+    {
+        $return = $this->returns[$method];
+        if (is_callable($return)) {
+            $return = call_user_func_array($return, $arguments);
+        }
+
+        return $return;
+    }
+
+    /**
+     * Check if method has custom behavior and register invoke.
+     *
+     * @param string $method Method name
      *
      * @return bool
      */
@@ -108,28 +111,31 @@ class ClassBehavior implements PuppetThreadInterface
     }
 
     /**
-     * Register static method invoke.
+     * Set behavior for method.
      *
-     * @param string $method Method name
-     * @param array $arguments
+     * @param string $method
+     * @param mixed $returns What shall method returns
      */
-    public function registerInvoke($method, array $arguments)
+    public function delusionSetCustomBehavior($method, $returns)
     {
-        if (empty($this->invokes[$method])) {
-            $this->invokes[$method] = [];
-        }
-        array_push($this->invokes[$method], $arguments);
+        $this->returns[$method] = $returns;
     }
 
     /**
-     * Get custom behavior for method.
+     * Reset behavior for method to default.
      *
      * @param string $method
-     *
-     * @return mixed
      */
-    public function getCustomBehavior($method)
+    public function delusionResetCustomBehavior($method)
     {
-        return $this->delusionHasCustomBehavior($method) ? $this->returns[$method] : null;
+        unset($this->returns[$method]);
+    }
+
+    /**
+     * Reset class to original state.
+     */
+    public function delusionResetAllCustomBehavior()
+    {
+        $this->returns = [];
     }
 }
