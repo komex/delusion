@@ -38,13 +38,13 @@ class DelusionTest extends TestCase
     public function testSetBlackList()
     {
         Assert::equals(
-            ['Delusion', 'TokenReflection'],
+            ['Delusion'],
             $this->delusion->getBlackList(),
             'Invalid default values in black list'
         );
         $this->delusion->setBlackList(['SomeClassName1', 'SomeClassName2', '\\SomeClassName1', 'Delusion']);
         Assert::equals(
-            ['SomeClassName1', 'SomeClassName2', 'Delusion', 'TokenReflection'],
+            ['SomeClassName1', 'SomeClassName2', 'Delusion'],
             $this->delusion->getBlackList(),
             'Black list setter must always appends a default classes and removes duplicates'
         );
@@ -57,12 +57,12 @@ class DelusionTest extends TestCase
     {
         Assert::that($this->delusion->getBlackList(), new Not(new AnyValue(new IdenticalTo('AddToBlackList'))));
         $this->delusion->addToBlackList('AddToBlackList');
-        Assert::count(5, $this->delusion->getBlackList());
+        Assert::count(4, $this->delusion->getBlackList());
         Assert::that($this->delusion->getBlackList(), new AnyValue(new IdenticalTo('AddToBlackList')));
         $this->delusion->addToBlackList('Delusion');
-        Assert::count(5, $this->delusion->getBlackList());
+        Assert::count(4, $this->delusion->getBlackList());
         $this->delusion->addToBlackList('AddToBlackList2');
-        Assert::count(6, $this->delusion->getBlackList());
+        Assert::count(5, $this->delusion->getBlackList());
         Assert::that($this->delusion->getBlackList(), new AnyValue(new IdenticalTo('AddToBlackList2')));
     }
 
@@ -72,10 +72,10 @@ class DelusionTest extends TestCase
     public function testRemoveFromBlackList()
     {
         $this->delusion->removeFromBlackList('\\SomeClassName1');
-        Assert::count(5, $this->delusion->getBlackList());
+        Assert::count(4, $this->delusion->getBlackList());
         Assert::that($this->delusion->getBlackList(), new Not(new AnyValue(new IdenticalTo('SomeClassName1'))));
         $this->delusion->removeFromBlackList('Delusion');
-        Assert::count(5, $this->delusion->getBlackList());
+        Assert::count(4, $this->delusion->getBlackList());
         Assert::that($this->delusion->getBlackList(), new AnyValue(new IdenticalTo('Delusion')));
     }
 
@@ -85,10 +85,10 @@ class DelusionTest extends TestCase
     public function testRemoveFromBlackListByPrefix()
     {
         $this->delusion->removeFromBlackList('AddToBlackList');
-        Assert::count(3, $this->delusion->getBlackList());
+        Assert::count(2, $this->delusion->getBlackList());
         Assert::that($this->delusion->getBlackList(), new Not(new AnyValue(new IdenticalTo('AddToBlackList2'))));
         Assert::equals(
-            ['SomeClassName2', 'Delusion', 'TokenReflection'],
+            ['SomeClassName2', 'Delusion'],
             $this->delusion->getBlackList()
         );
     }
@@ -108,10 +108,10 @@ class DelusionTest extends TestCase
         Assert::typeOf('array', $this->delusion->getWhiteList(), 'White list must be an array');
         $this->delusion->setWhiteList(['SomeClassName1', 'SomeClassName2', '\\SomeClassName1']);
         Assert::equals(['SomeClassName1', 'SomeClassName2'], $this->delusion->getWhiteList());
-        $this->delusion->setWhiteList(['Delusion', 'TokenReflection']);
+        $this->delusion->setWhiteList(['Delusion']);
         Assert::isEmpty(
             $this->delusion->getWhiteList(),
-            '"Delusion" and "TokenReflection" classes may not be sets to white list'
+            '"Delusion" classes may not be sets to white list'
         );
     }
 
