@@ -36,3 +36,9 @@ This project was founded by [Andrey Kolchenko](https://github.com/komex) in Augu
 ## Support or Contact
 
 Having trouble with Delusion? Contact andrey@kolchenko.me and we’ll help you in the short time.
+
+## License
+
+[![Creative Commons License](http://i.creativecommons.org/l/by-sa/3.0/88x31.png)](http://creativecommons.org/licenses/by-sa/3.0/)<br/>
+Unteist by [Andrey Kolchenko](https://github.com/komex) is licensed under a [Creative Commons Attribution-ShareAlike 3.0 Unported License](http://creativecommons.org/licenses/by-sa/3.0/).<br/>
+Based on a work at [https://github.com/komex/delusion](https://github.com/komex/delusion).

@@ -1,11 +1,11 @@
 {
     "name": "komex/delusion",
-    "description": "Mock object instrument. Allows to mock and stub all classes.",
+    "description": "Mock object instrument. Allows to mock and stub all not build-in objects and static classes.",
     "homepage": "http://komex.github.io/delusion/",
     "keywords": [
-        "testing", "test", "unit test", "mock", "stub", "framework", "instrument"
+        "testing", "test", "unit test", "mock", "stub", "framework", "instrument", "php"
     ],
-    "license": "MIT",
+    "license": "CC-BY-SA-3.0",
     "type": "library",
     "authors": [
         {
@@ -20,7 +20,8 @@
         "issues": "https://github.com/komex/delusion/issues"
     },
     "require": {
-        "php": ">=5.4.0"
+        "php": ">=5.4.0",
+        "ext-tokenizer": "*"
     },
     "require-dev": {
         "komex/unteist": "dev-develop"
