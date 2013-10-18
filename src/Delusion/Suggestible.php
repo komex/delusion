@@ -16,7 +16,22 @@ namespace Delusion;
 interface Suggestible
 {
     /**
-     * @param Configurator $configurator
+     * @return array
      */
-    public function delusionSuggestConnect(Configurator $configurator);
+    public function delusionGetInvokes();
+
+    /**
+     * @return array
+     */
+    public function delusionGetReturns();
+
+    /**
+     * @return bool
+     */
+    public function delusionDoesRegisterInvokes();
+
+    /**
+     * @param bool $register
+     */
+    public function delusionRegisterInvokes($register);
 }

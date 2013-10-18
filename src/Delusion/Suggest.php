@@ -61,6 +61,38 @@ trait Suggest
     }
 
     /**
+     * @return \ArrayObject
+     */
+    public function &delusionGetInvokes()
+    {
+        return $this->__delusion__invokes;
+    }
+
+    /**
+     * @return array
+     */
+    public function &delusionGetReturns()
+    {
+        return $this->__delusion__returns;
+    }
+
+    /**
+     * @return bool
+     */
+    public function delusionDoesRegisterInvokes()
+    {
+        return self::$__delusion__registerInvokes;
+    }
+
+    /**
+     * @param bool $register
+     */
+    public function delusionRegisterInvokes($register)
+    {
+        self::$__delusion__registerInvokes = !!$register;
+    }
+
+    /**
      * @param string $method
      * @param array $arguments
      */
