@@ -61,7 +61,7 @@ trait Suggest
     }
 
     /**
-     * @return \ArrayObject
+     * @return array
      */
     public function &delusionGetInvokes()
     {
