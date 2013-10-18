@@ -240,7 +240,7 @@ class Delusion
      *
      * @param string $class
      *
-     * @return ClassBehavior
+     * @return ConfiguratorInterface
      * @throws \InvalidArgumentException If class does not loaded.
      */
     public function getClassBehavior($class)
