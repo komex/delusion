@@ -28,7 +28,7 @@ class Configurator
         } elseif ($class instanceof Suggestible) {
             $returns = & $class->delusionGetReturns();
 
-            return isset($returns[$method]);
+            return array_key_exists($method, $returns);
         }
 
         return false;
@@ -107,7 +107,7 @@ class Configurator
     {
         $invokes = self::getAllInvokes($class);
 
-        return (isset($invokes[$method])) ? $invokes[$method] : [];
+        return (array_key_exists($method, $invokes)) ? $invokes[$method] : [];
     }
 
     /**
@@ -125,6 +125,19 @@ class Configurator
         }
 
         return $invokes;
+    }
+
+    /**
+     * Returns number of method invokes.
+     *
+     * @param string|Suggestible $class
+     * @param string $method
+     *
+     * @return int
+     */
+    public static function getInvokesCount($class, $method)
+    {
+        return count(self::getInvokes($class, $method));
     }
 
     /**
