@@ -35,7 +35,7 @@ trait Suggest
      */
     private static function delusionHasCustomBehaviorStatic($method)
     {
-        return Delusion::injection()->getClassBehavior(__CLASS__)->delusionHasCustomBehavior($method);
+        return Delusion::injection()->getClassBehavior(__CLASS__)->hasCustomBehavior($method);
     }
 
     /**
@@ -46,7 +46,7 @@ trait Suggest
      */
     private static function delusionGetCustomBehaviorStatic($method, array $args)
     {
-        return Delusion::injection()->getClassBehavior(__CLASS__)->delusionGetCustomBehavior($method, $args);
+        return Delusion::injection()->getClassBehavior(__CLASS__)->getCustomBehavior($method, $args);
     }
 
     /**
@@ -56,7 +56,7 @@ trait Suggest
     private static function delusionRegisterInvokeStatic($method, array $arguments)
     {
         if (self::$__delusion__registerInvokes) {
-            Delusion::injection()->getClassBehavior(__CLASS__)->delusionRegisterInvoke(__FUNCTION__, func_get_args());
+            Delusion::injection()->getClassBehavior(__CLASS__)->registerInvoke(__FUNCTION__, func_get_args());
         }
     }
 
