@@ -40,7 +40,7 @@ class ClassModifier extends Modifier
             case '{':
                 $this->injector->setModifier(new MethodParser());
                 $implements = $this->implemented ? ',' : ' implements';
-                $value = $implements . ' \\Delusion\\DelusionInterface' . $this->whiteSpace . $value;
+                $value = $implements . ' \\Delusion\\Suggestible' . $this->whiteSpace . $value;
                 break;
             default:
                 $whiteSpace = $this->whiteSpace;
