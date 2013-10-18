@@ -13,7 +13,7 @@ namespace Delusion;
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-class ClassBehavior implements DelusionInterface
+class ClassBehavior implements ConfiguratorInterface
 {
     /**
      * @var array[]
@@ -31,9 +31,9 @@ class ClassBehavior implements DelusionInterface
      *
      * @return int
      */
-    public function delusionGetInvokesCount($method)
+    public function getInvokesCount($method)
     {
-        return count($this->delusionGetInvokesArguments($method));
+        return count($this->getInvokes($method));
     }
 
     /**
@@ -43,7 +43,7 @@ class ClassBehavior implements DelusionInterface
      *
      * @return array[]
      */
-    public function delusionGetInvokesArguments($method)
+    public function getInvokes($method)
     {
         return array_key_exists($method, $this->invokes) ? $this->invokes[$method] : [];
     }
@@ -53,7 +53,7 @@ class ClassBehavior implements DelusionInterface
      *
      * @param string $method
      */
-    public function delusionResetInvokesCounter($method)
+    public function resetInvokes($method)
     {
         unset($this->invokes[$method]);
     }
@@ -61,7 +61,7 @@ class ClassBehavior implements DelusionInterface
     /**
      * Clear all invokes stack.
      */
-    public function delusionResetAllInvokesCounter()
+    public function resetAllInvokes()
     {
         $this->invokes = [];
     }
@@ -72,7 +72,7 @@ class ClassBehavior implements DelusionInterface
      * @param string $method
      * @param array $arguments
      */
-    public function delusionRegisterInvoke($method, array $arguments)
+    public function registerInvoke($method, array $arguments)
     {
         if (empty($this->invokes[$method])) {
             $this->invokes[$method] = [];
@@ -88,7 +88,7 @@ class ClassBehavior implements DelusionInterface
      *
      * @return mixed
      */
-    public function delusionGetCustomBehavior($method, array $arguments)
+    public function getCustomBehavior($method, array $arguments)
     {
         $return = $this->returns[$method];
         if (is_callable($return)) {
@@ -105,7 +105,7 @@ class ClassBehavior implements DelusionInterface
      *
      * @return bool
      */
-    public function delusionHasCustomBehavior($method)
+    public function hasCustomBehavior($method)
     {
         return array_key_exists($method, $this->returns);
     }
@@ -116,7 +116,7 @@ class ClassBehavior implements DelusionInterface
      * @param string $method
      * @param mixed $returns What shall method returns
      */
-    public function delusionSetCustomBehavior($method, $returns)
+    public function setCustomBehavior($method, $returns)
     {
         $this->returns[$method] = $returns;
     }
@@ -126,7 +126,7 @@ class ClassBehavior implements DelusionInterface
      *
      * @param string $method
      */
-    public function delusionResetCustomBehavior($method)
+    public function resetCustomBehavior($method)
     {
         unset($this->returns[$method]);
     }
@@ -134,7 +134,7 @@ class ClassBehavior implements DelusionInterface
     /**
      * Reset class to original state.
      */
-    public function delusionResetAllCustomBehavior()
+    public function resetAllCustomBehavior()
     {
         $this->returns = [];
     }

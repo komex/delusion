@@ -8,12 +8,12 @@
 namespace Delusion;
 
 /**
- * Interface DelusionInterface
+ * Interface ConfiguratorInterface
  *
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-interface DelusionInterface
+interface ConfiguratorInterface
 {
     /**
      * Returns number of method invokes.
@@ -22,7 +22,7 @@ interface DelusionInterface
      *
      * @return int
      */
-    public function delusionGetInvokesCount($method);
+    public function getInvokesCount($method);
 
     /**
      * Return the array of array of arguments with which the method was invoked.
@@ -31,19 +31,19 @@ interface DelusionInterface
      *
      * @return array[]
      */
-    public function delusionGetInvokesArguments($method);
+    public function getInvokes($method);
 
     /**
      * Clear invokes stack for method.
      *
      * @param string $method
      */
-    public function delusionResetInvokesCounter($method);
+    public function resetInvokes($method);
 
     /**
      * Clear all invokes stack.
      */
-    public function delusionResetAllInvokesCounter();
+    public function resetAllInvokes();
 
     /**
      * Register new method invoke.
@@ -51,7 +51,7 @@ interface DelusionInterface
      * @param string $method
      * @param array $arguments
      */
-    public function delusionRegisterInvoke($method, array $arguments);
+    public function registerInvoke($method, array $arguments);
 
     /**
      * Get result of custom behavior for specified method.
@@ -61,7 +61,7 @@ interface DelusionInterface
      *
      * @return mixed
      */
-    public function delusionGetCustomBehavior($method, array $arguments);
+    public function getCustomBehavior($method, array $arguments);
 
     /**
      * Check if method has custom behavior and register invoke.
@@ -70,7 +70,7 @@ interface DelusionInterface
      *
      * @return bool
      */
-    public function delusionHasCustomBehavior($method);
+    public function hasCustomBehavior($method);
 
     /**
      * Set behavior for method.
@@ -78,17 +78,17 @@ interface DelusionInterface
      * @param string $method
      * @param mixed $returns What shall method returns
      */
-    public function delusionSetCustomBehavior($method, $returns);
+    public function setCustomBehavior($method, $returns);
 
     /**
      * Reset behavior for method to default.
      *
      * @param string $method
      */
-    public function delusionResetCustomBehavior($method);
+    public function resetCustomBehavior($method);
 
     /**
      * Reset class to original state.
      */
-    public function delusionResetAllCustomBehavior();
+    public function resetAllCustomBehavior();
 }
