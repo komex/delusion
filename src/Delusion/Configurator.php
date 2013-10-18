@@ -13,187 +13,143 @@ namespace Delusion;
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-class Configurator implements ConfiguratorInterface
+class Configurator
 {
-    /**
-     * @var ConfiguratorInterface
-     */
-    protected $configurator;
-    /**
-     * @var Suggestible
-     */
-    protected $suggest;
-
-    /**
-     * @param string|Suggestible $class
-     */
-    public function __construct($class)
-    {
-        if (is_string($class)) {
-            $this->configurator = Delusion::injection()->getClassBehavior($class);
-        } elseif ($class instanceof Suggestible) {
-            $this->suggest = $class;
-        }
-    }
-
     /**
      * Returns number of method invokes.
      *
+     * @param Suggestible $class
      * @param string $method
      *
      * @return int
      */
-    public function getInvokesCount($method)
+    public static function getInvokesCount(Suggestible $class, $method)
     {
-        return count($this->getInvokes($method));
+        return count(self::getInvokes($class, $method));
     }
 
     /**
      * Return the array of array of arguments with which the method was invoked.
      *
+     * @param Suggestible $class
      * @param string $method
      *
      * @return array[]
      */
-    public function getInvokes($method)
+    public static function getInvokes(Suggestible $class, $method)
     {
-        if ($this->configurator !== null) {
-            return $this->configurator->getInvokes($method);
-        } else {
-            $invokes = $this->suggest->delusionGetInvokes();
+        $invokes = $class->delusionGetInvokes();
 
-            return array_key_exists($method, $invokes) ? $invokes[$method] : [];
-        }
+        return array_key_exists($method, $invokes) ? $invokes[$method] : [];
     }
 
     /**
      * Clear invokes stack for method.
      *
+     * @param Suggestible $class
      * @param string $method
      */
-    public function resetInvokes($method)
+    public static function resetInvokes(Suggestible $class, $method)
     {
-        if ($this->configurator !== null) {
-            $this->configurator->resetInvokes($method);
-        } else {
-            $invokes = & $this->suggest->delusionGetInvokes();
-            unset($invokes[$method]);
-        }
+        $invokes = & $class->delusionGetInvokes();
+        unset($invokes[$method]);
     }
 
     /**
      * Clear all invokes stack.
+     *
+     * @param Suggestible $class
      */
-    public function resetAllInvokes()
+    public static function resetAllInvokes(Suggestible $class)
     {
-        if ($this->configurator !== null) {
-            $this->configurator->resetAllInvokes();
-        } else {
-            $invokes = & $this->suggest->delusionGetInvokes();
-            $invokes = [];
-        }
+        $invokes = & $class->delusionGetInvokes();
+        $invokes = [];
     }
 
     /**
      * Register new method invoke.
      *
+     * @param Suggestible $class
      * @param string $method
      * @param array $arguments
      */
-    public function registerInvoke($method, array $arguments)
+    public static function registerInvoke(Suggestible $class, $method, array $arguments)
     {
-        if ($this->configurator !== null) {
-            $this->configurator->registerInvoke($method, $arguments);
-        } else {
-            $invokes = & $this->suggest->delusionGetInvokes();
-            if (empty($invokes[$method])) {
-                $invokes[$method] = [];
-            }
-            array_push($invokes[$method], $arguments);
+        $invokes = & $class->delusionGetInvokes();
+        if (empty($invokes[$method])) {
+            $invokes[$method] = [];
         }
+        array_push($invokes[$method], $arguments);
     }
 
     /**
      * Get result of custom behavior for specified method.
      *
+     * @param Suggestible $class
      * @param string $method
      * @param array $arguments
      *
      * @return mixed
      */
-    public function getCustomBehavior($method, array $arguments)
+    public static function getCustomBehavior(Suggestible $class, $method, array $arguments)
     {
-        if ($this->configurator !== null) {
-            return $this->configurator->getCustomBehavior($method, $arguments);
-        } else {
-            $return = & $this->suggest->delusionGetReturns();
-            if (is_callable($return)) {
-                $return = call_user_func_array($return, $arguments);
-            }
-
-            return $return;
+        $returns = & $class->delusionGetReturns();
+        $return = $returns[$method];
+        if (is_callable($return)) {
+            $return = call_user_func_array($return, $arguments);
         }
+
+        return $return;
     }
 
     /**
      * Check if method has custom behavior and register invoke.
      *
+     * @param Suggestible $class
      * @param string $method Method name
      *
      * @return bool
      */
-    public function hasCustomBehavior($method)
+    public static function hasCustomBehavior(Suggestible $class, $method)
     {
-        if ($this->configurator !== null) {
-            return $this->configurator->hasCustomBehavior($method);
-        } else {
-            $return = & $this->suggest->delusionGetReturns();
+        $return = & $class->delusionGetReturns();
 
-            return array_key_exists($method, $return);
-        }
+        return array_key_exists($method, $return);
     }
 
     /**
      * Set behavior for method.
      *
+     * @param Suggestible $class
      * @param string $method
      * @param mixed $returns What shall method returns
      */
-    public function setCustomBehavior($method, $returns)
+    public static function setCustomBehavior(Suggestible $class, $method, $returns)
     {
-        if ($this->configurator !== null) {
-            $this->configurator->setCustomBehavior($method, $returns);
-        } else {
-            $return = & $this->suggest->delusionGetReturns();
-            $return[$method] = $returns;
-        }
+        $return = & $class->delusionGetReturns();
+        $return[$method] = $returns;
     }
 
     /**
      * Reset behavior for method to default.
      *
+     * @param Suggestible $class
      * @param string $method
      */
-    public function resetCustomBehavior($method)
+    public static function resetCustomBehavior(Suggestible $class, $method)
     {
-        if ($this->configurator !== null) {
-            $this->configurator->resetCustomBehavior($method);
-        } else {
-            $return = & $this->suggest->delusionGetReturns();
-            unset($return[$method]);
-        }
+        $return = & $class->delusionGetReturns();
+        unset($return[$method]);
     }
 
     /**
      * Reset class to original state.
+     *
+     * @param Suggestible $class
      */
-    public function resetAllCustomBehavior()
+    public static function resetAllCustomBehavior(Suggestible $class)
     {
-        if ($this->configurator !== null) {
-            $this->configurator->resetAllCustomBehavior();
-        } else {
-            $return = & $this->suggest->delusionGetReturns();
-            $return = [];
-        }
+        $return = & $class->delusionGetReturns();
+        $return = [];
     }
 }

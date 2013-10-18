@@ -42,6 +42,10 @@ class Delusion
      */
     private $static_classes = [];
     /**
+     * @var Suggestible[]
+     */
+    private $suggests = [];
+    /**
      * @var int
      */
     private $strategy = self::STRATEGY_ALLOW;
@@ -251,6 +255,21 @@ class Delusion
         }
 
         return $this->static_classes[$class];
+    }
+
+    /**
+     * @param string $class
+     *
+     * @return Suggestible
+     */
+    public function getSuggest($class)
+    {
+        $class = $this->formatClass($class);
+        if (empty($this->static_classes[$class])) {
+            $this->suggests[$class] = new ClassSuggest();
+        }
+
+        return $this->suggests[$class];
     }
 
     /**

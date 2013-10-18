@@ -24,18 +24,18 @@ trait ClassController
      */
     private static function delusionHasCustomBehaviorStatic($method)
     {
-        return Delusion::injection()->getClassBehavior(__CLASS__)->hasCustomBehavior($method);
+        return Configurator::hasCustomBehavior(Delusion::injection()->getSuggest(__CLASS__), $method);
     }
 
     /**
      * @param string $method
-     * @param array $args
+     * @param array $arguments
      *
      * @return mixed
      */
-    private static function delusionGetCustomBehaviorStatic($method, array $args)
+    private static function delusionGetCustomBehaviorStatic($method, array $arguments)
     {
-        return Delusion::injection()->getClassBehavior(__CLASS__)->getCustomBehavior($method, $args);
+        return Configurator::getCustomBehavior(Delusion::injection()->getSuggest(__CLASS__), $method, $arguments);
     }
 
     /**
@@ -45,7 +45,7 @@ trait ClassController
     private static function delusionRegisterInvokeStatic($method, array $arguments)
     {
         if (self::$__delusion__registerInvokes) {
-            Delusion::injection()->getClassBehavior(__CLASS__)->registerInvoke(__FUNCTION__, func_get_args());
+            Configurator::registerInvoke(Delusion::injection()->getSuggest(__CLASS__), $method, $arguments);
         }
     }
 
@@ -56,27 +56,19 @@ trait ClassController
     private function delusionRegisterInvoke($method, array $arguments)
     {
         if (self::$__delusion__registerInvokes) {
-            if (empty($this->__delusion__invokes[$method])) {
-                $this->__delusion__invokes[$method] = [];
-            }
-            array_push($this->__delusion__invokes[$method], $arguments);
+            Configurator::registerInvoke($this, $method, $arguments);
         }
     }
 
     /**
      * @param string $method
-     * @param array $args
+     * @param array $arguments
      *
      * @return mixed
      */
-    private function delusionGetCustomBehavior($method, array $args)
+    private function delusionGetCustomBehavior($method, array $arguments)
     {
-        $return = $this->__delusion__returns[$method];
-        if (is_callable($return)) {
-            $return = call_user_func_array($return, $args);
-        }
-
-        return $return;
+        return Configurator::getCustomBehavior($this, $method, $arguments);
     }
 
     /**
@@ -86,6 +78,6 @@ trait ClassController
      */
     private function delusionHasCustomBehavior($method)
     {
-        return array_key_exists($method, $this->__delusion__returns);
+        return Configurator::hasCustomBehavior($this, $method);
     }
 }

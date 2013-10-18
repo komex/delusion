@@ -6,4 +6,4 @@
  */
 
 require 'vendor/autoload.php';
-$d = \Delusion\Delusion::injection();
+\Delusion\Delusion::injection();
