@@ -54,7 +54,7 @@ class MethodParser extends Modifier
             $value .= $this->getMethodCode();
         } elseif ($type === '}') {
             $this->injector->setModifier(new Modifier());
-            $value = 'use \Delusion\Suggestible;' . $value;
+            $value = 'use \Delusion\Suggest;' . $value;
         }
 
         return $value;

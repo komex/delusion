@@ -8,13 +8,17 @@
 namespace Delusion;
 
 /**
- * Class Suggestible
+ * Class Suggest
  *
  * @package Delusion
  * @author Andrey Kolchenko <andrey@kolchenko.me>
  */
-trait Suggestible
+trait Suggest
 {
+    /**
+     * @var bool
+     */
+    private static $__delusion__registerInvokes = false;
     /**
      * @var array
      */
@@ -51,7 +55,9 @@ trait Suggestible
      */
     private static function delusionRegisterInvokeStatic($method, array $arguments)
     {
-        Delusion::injection()->getClassBehavior(__CLASS__)->delusionRegisterInvoke(__FUNCTION__, func_get_args());
+        if (self::$__delusion__registerInvokes) {
+            Delusion::injection()->getClassBehavior(__CLASS__)->delusionRegisterInvoke(__FUNCTION__, func_get_args());
+        }
     }
 
     /**
@@ -60,10 +66,12 @@ trait Suggestible
      */
     private function delusionRegisterInvoke($method, array $arguments)
     {
-        if (empty($this->__delusion__invokes[$method])) {
-            $this->__delusion__invokes[$method] = [];
+        if (self::$__delusion__registerInvokes) {
+            if (empty($this->__delusion__invokes[$method])) {
+                $this->__delusion__invokes[$method] = [];
+            }
+            array_push($this->__delusion__invokes[$method], $arguments);
         }
-        array_push($this->__delusion__invokes[$method], $arguments);
     }
 
     /**
