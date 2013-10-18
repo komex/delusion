@@ -106,7 +106,10 @@ class Configurator implements ConfiguratorInterface
             $this->configurator->registerInvoke($method, $arguments);
         } else {
             $invokes = & $this->suggest->delusionGetInvokes();
-            $invokes[$method] = $arguments;
+            if (empty($invokes[$method])) {
+                $invokes[$method] = [];
+            }
+            array_push($invokes[$method], $arguments);
         }
     }
 
