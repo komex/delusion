@@ -15,5 +15,8 @@ namespace Delusion;
  */
 interface Suggestible
 {
-
+    /**
+     * @param Configurator $configurator
+     */
+    public function delusionSuggestConnect(Configurator $configurator);
 }
