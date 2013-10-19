@@ -74,12 +74,11 @@ class MethodParser extends Modifier
             $condition .= '$this->delusionRegisterInvoke(__FUNCTION__, func_get_args()); ';
         }
         if ($this->static || $this->isConstructor) {
-            $condition .= 'if (self::delusionHasCustomBehaviorStatic(__FUNCTION__)) ';
-            $condition .= 'return self::delusionGetCustomBehaviorStatic(__FUNCTION__, func_get_args());';
+            $condition .= 'if (self::delusionCustomBehaviorStatic(__FUNCTION__, func_get_args())) ';
         } else {
-            $condition .= 'if ($this->delusionHasCustomBehavior(__FUNCTION__)) ';
-            $condition .= 'return $this->delusionGetCustomBehavior(__FUNCTION__, func_get_args());';
+            $condition .= 'if ($this->delusionCustomBehavior(__FUNCTION__, func_get_args())) ';
         }
+        $condition .= 'return self::delusionGetResults();';
 
         return $condition;
     }

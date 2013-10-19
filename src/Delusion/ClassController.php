@@ -18,24 +18,39 @@ trait ClassController
     use Suggest;
 
     /**
-     * @param string $method
+     * @var mixed
+     */
+    private static $delusionResult;
+
+    /**
+     * @param $method
+     * @param array $arguments
      *
      * @return bool
      */
-    private static function delusionHasCustomBehaviorStatic($method)
+    private static function delusionCustomBehaviorStatic($method, array $arguments)
     {
-        return Configurator::hasCustomBehavior(Delusion::injection()->getSuggest(__CLASS__), $method);
+        $class = Delusion::injection()->getSuggest(__CLASS__);
+        if (Configurator::hasCustomBehavior($class, $method)) {
+            self::$delusionResult = Configurator::getCustomBehavior($class, $method, $arguments);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
-     * @param string $method
-     * @param array $arguments
+     * Get result of custom behavior.
      *
      * @return mixed
      */
-    private static function delusionGetCustomBehaviorStatic($method, array $arguments)
+    private static function delusionGetResults()
     {
-        return Configurator::getCustomBehavior(Delusion::injection()->getSuggest(__CLASS__), $method, $arguments);
+        $result = self::$delusionResult;
+        self::$delusionResult = null;
+
+        return $result;
     }
 
     /**
@@ -52,32 +67,32 @@ trait ClassController
     /**
      * @param string $method
      * @param array $arguments
+     *
+     * @return bool
      */
-    private function delusionRegisterInvoke($method, array $arguments)
+    private function delusionCustomBehavior($method, array $arguments)
     {
-        if (self::$__delusion__registerInvokes) {
-            Configurator::registerInvoke($this, $method, $arguments);
+        /** @var Suggestible $this */
+        if (Configurator::hasCustomBehavior($this, $method)) {
+            self::$delusionResult = Configurator::getCustomBehavior($this, $method, $arguments);
+
+            return true;
+        } elseif (self::delusionCustomBehaviorStatic($method, $arguments)) {
+            return true;
         }
+
+        return false;
     }
 
     /**
      * @param string $method
      * @param array $arguments
-     *
-     * @return mixed
      */
-    private function delusionGetCustomBehavior($method, array $arguments)
+    private function delusionRegisterInvoke($method, array $arguments)
     {
-        return Configurator::getCustomBehavior($this, $method, $arguments);
-    }
-
-    /**
-     * @param string $method
-     *
-     * @return bool
-     */
-    private function delusionHasCustomBehavior($method)
-    {
-        return Configurator::hasCustomBehavior($this, $method);
+        /** @var Suggestible $this */
+        if (self::$__delusion__registerInvokes) {
+            Configurator::registerInvoke($this, $method, $arguments);
+        }
     }
 }

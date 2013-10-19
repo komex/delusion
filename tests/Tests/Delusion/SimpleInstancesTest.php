@@ -114,4 +114,36 @@ class SimpleInstancesTest extends TestCase
         $class = new SimpleClassA();
         Assert::count(1, $class->log);
     }
+
+    /**
+     * Test the behavior of the methods with the established global guidelines.
+     */
+    public function testCustomDefaults()
+    {
+        Configurator::setCustomBehavior($this->suggest, 'publicMethod', 'default value');
+
+        $class2 = new SimpleClassA();
+        Assert::identical('default value', $class2->publicMethod());
+        $class3 = new SimpleClassA();
+        Assert::identical('default value', $class3->publicMethod());
+
+        Configurator::resetCustomBehavior($this->suggest, 'publicMethod');
+
+        $class4 = new SimpleClassA();
+        Assert::identical(3, $class4->publicMethod());
+    }
+
+    /**
+     * Test behavior priority.
+     */
+    public function testBehaviorPriority()
+    {
+        /** @var Suggestible|SimpleClassA $class */
+        $class = new SimpleClassA();
+        Assert::identical(3, $class->publicMethod());
+        Configurator::setCustomBehavior($this->suggest, 'publicMethod', 'default value');
+        Assert::identical('default value', $class->publicMethod());
+        Configurator::setCustomBehavior($class, 'publicMethod', 'instance');
+        Assert::identical('instance', $class->publicMethod());
+    }
 }
