@@ -38,10 +38,6 @@ class Delusion
      */
     private $fileName;
     /**
-     * @var ClassBehavior[]
-     */
-    private $static_classes = [];
-    /**
      * @var Suggestible[]
      */
     private $suggests = [];
@@ -57,10 +53,6 @@ class Delusion
      * @var array
      */
     private $black_list = ['Delusion'];
-    /**
-     * @var string
-     */
-    private $prefix;
 
     /**
      * Init Delusion.
@@ -69,7 +61,6 @@ class Delusion
      */
     private function __construct()
     {
-        $this->prefix = sprintf('___delusion_%s___', substr(sha1(rand()), 0, 5));
         $autoLoaders = spl_autoload_functions();
         $this->composer = $this->findComposer($autoLoaders);
         spl_autoload_register([$this, 'loadClass'], true, true);
@@ -88,14 +79,6 @@ class Delusion
         }
 
         return self::$instance;
-    }
-
-    /**
-     * @return string
-     */
-    public function getPrefix()
-    {
-        return $this->prefix;
     }
 
     /**
@@ -240,24 +223,6 @@ class Delusion
     }
 
     /**
-     * Get behavior of static class.
-     *
-     * @param string $class
-     *
-     * @return ConfiguratorInterface
-     * @throws \InvalidArgumentException If class does not loaded.
-     */
-    public function getClassBehavior($class)
-    {
-        $class = $this->formatClass($class);
-        if (empty($this->static_classes[$class])) {
-            $this->static_classes[$class] = new ClassBehavior();
-        }
-
-        return $this->static_classes[$class];
-    }
-
-    /**
      * @param string $class
      *
      * @return Suggestible
@@ -265,7 +230,7 @@ class Delusion
     public function getSuggest($class)
     {
         $class = $this->formatClass($class);
-        if (empty($this->static_classes[$class])) {
+        if (empty($this->suggests[$class])) {
             $this->suggests[$class] = new ClassSuggest();
         }
 
