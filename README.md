@@ -14,7 +14,7 @@ Just add one line of code before all tests to get ability to do anything with al
 \Delusion\Delusion::injection();
 ```
 
-After this injection all your classes will implements ```\Delusion\DelusionInterface```.
+After this injection all your classes will implements ```\Delusion\ConfiguratorInterface```.
 
 ## Installing
 
