@@ -54,13 +54,15 @@ trait ClassController
     }
 
     /**
+     * @param Suggestible $object
      * @param string $method
      * @param array $arguments
      */
-    private static function delusionRegisterInvokeStatic($method, array $arguments)
+    private static function delusionRegisterInvoke(Suggestible $object, $method, array $arguments)
     {
-        if (self::$__delusion__registerInvokes) {
-            Configurator::registerInvoke(Delusion::injection()->getSuggest(__CLASS__), $method, $arguments);
+        /** @var Suggestible $this */
+        if (Configurator::storeInvokes($object)) {
+            Configurator::registerInvoke($object, $method, $arguments);
         }
     }
 
@@ -82,17 +84,5 @@ trait ClassController
         }
 
         return false;
-    }
-
-    /**
-     * @param string $method
-     * @param array $arguments
-     */
-    private function delusionRegisterInvoke($method, array $arguments)
-    {
-        /** @var Suggestible $this */
-        if (self::$__delusion__registerInvokes) {
-            Configurator::registerInvoke($this, $method, $arguments);
-        }
     }
 }

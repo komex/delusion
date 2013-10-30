@@ -68,14 +68,12 @@ class MethodParser extends Modifier
     protected function getMethodCode()
     {
         $condition = '';
-        if ($this->static) {
-            $condition .= 'self::delusionRegisterInvokeStatic(__FUNCTION__, func_get_args()); ';
-        } else {
-            $condition .= '$this->delusionRegisterInvoke(__FUNCTION__, func_get_args()); ';
-        }
+        $template = 'self::delusionRegisterInvoke(%s, __FUNCTION__, func_get_args()); ';
         if ($this->static || $this->isConstructor) {
+            $condition .= sprintf($template, '\Delusion\Delusion::injection()->getSuggest(__CLASS__)');
             $condition .= 'if (self::delusionCustomBehaviorStatic(__FUNCTION__, func_get_args())) ';
         } else {
+            $condition .= sprintf($template, '$this');
             $condition .= 'if ($this->delusionCustomBehavior(__FUNCTION__, func_get_args())) ';
         }
         $condition .= 'return self::delusionGetResults();';
