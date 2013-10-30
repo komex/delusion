@@ -44,6 +44,18 @@ class Configurator
     }
 
     /**
+     * Return the array of array of arguments with which the method was invoked.
+     *
+     * @param Suggestible $class
+     *
+     * @return array[]
+     */
+    public static function getAllInvokes(Suggestible $class)
+    {
+        return $class->delusionGetInvokes();
+    }
+
+    /**
      * Clear invokes stack for method.
      *
      * @param Suggestible $class
@@ -80,6 +92,23 @@ class Configurator
             $invokes[$method] = [];
         }
         array_push($invokes[$method], $arguments);
+    }
+
+    /**
+     * Check or/and set flag to store invokes in class.
+     *
+     * @param Suggestible $class
+     * @param bool|null $store If store is not NULL method sets flag. Always returns current flag status.
+     *
+     * @return bool
+     */
+    public static function storeInvokes(Suggestible $class, $store = null)
+    {
+        if ($store !== null) {
+            $class->delusionRegisterInvokes($store);
+        }
+
+        return $class->delusionDoesRegisterInvokes();
     }
 
     /**
